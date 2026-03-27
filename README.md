@@ -1,6 +1,6 @@
 # namegen
 
-I've always wanted to have a way to reliably generate names for new projects.
+I've always wanted to have a way to reliably generate plausible sounding names for new projects.
 
 `namegen` is a Go CLI app that randomly generates short, pronounceable names.
 
@@ -9,8 +9,6 @@ The current implementation uses three layers:
 1. Template-based random word construction (using a vowel/consonant rhythm)
 2. Rule-based filtering and penalties
 3. Corpus-trained bigram scoring
-
-Created with the help of OpenCode + GPT-5.3-Codex.
 
 ## Usage
 ```bash
@@ -31,9 +29,9 @@ saire
 keipy
 ```
 
-Current flags (from `internal/cli/config.go`):
+Here's all the possible flags (from `internal/cli/config.go`):
 
-- `--attempts` max attempts per requested word
+- `--attempts` max random word generation attempts per requested word
 - `--count` number of words to generate
 - `--length` generated word length
 - `--seed` optional RNG seed for reproducible output
@@ -217,3 +215,6 @@ Scoring flow example:
 3. n-gram band for `-1.719` gives a positive delta
 4. final score stays above acceptance threshold
 5. candidate accepted
+
+## TODO
+- Tune n-gram bands

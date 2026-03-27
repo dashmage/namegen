@@ -1,7 +1,6 @@
 package gen
 
 import (
-	"fmt"
 	"math/rand"
 	"strings"
 	"time"
@@ -54,8 +53,6 @@ func RandomWord(length int) string {
 
 // RandomPronounceableWord generates a random word that's pronounceable
 func RandomPronounceableWord(config cli.Config) {
-	wordLen := config.Length
-	count := config.Count
 	wordsGenerated := 0
 	curAttempts := 0
 	hardRejects := 0
@@ -63,13 +60,13 @@ func RandomPronounceableWord(config cli.Config) {
 	hardRuleHitCounts := make(map[string]int)
 	softRuleHitCounts := make(map[string]int)
 
-	for wordsGenerated < count {
+	for wordsGenerated < config.Count {
 		if curAttempts >= config.Attempts {
 			break
 		}
 
-		word := RandomWord(wordLen)
-		score, hardReject, evalDebug := EvaluateDetailed(word)
+		word := RandomWord(config.Length)
+		score, hardReject, evalDebug := Evaluate(word)
 		curAttempts++
 
 		for _, hit := range evalDebug.HardRuleHits {
@@ -89,73 +86,56 @@ func RandomPronounceableWord(config cli.Config) {
 			continue
 		}
 
-		printAcceptedWord(word, score, config.Debug)
+		cli.PrintAcceptedWord(word, score, config.Debug)
 		wordsGenerated++
 	}
 
 	if config.Debug {
-		printDebugSummary(config, wordsGenerated, curAttempts, hardRejects, lowScoreRejects, hardRuleHitCounts, softRuleHitCounts)
+		cli.PrintDebugSummary(cli.DebugSummary{
+			Attempts:        curAttempts,
+			Accepted:        wordsGenerated,
+			HardRejects:     hardRejects,
+			LowScoreRejects: lowScoreRejects,
+			Threshold:       config.Threshold,
+			RunSeed:         config.RunSeed,
+			SeedSet:         config.SeedSet,
+			HardRuleHits:    buildHardRuleStats(hardRuleHitCounts),
+			SoftRuleHits:    buildSoftRuleStats(softRuleHitCounts),
+		})
 	}
 }
 
-func printAcceptedWord(word string, score int, debug bool) {
-	if debug {
-		fmt.Printf("%s (%d)\n", word, score)
-		return
-	}
-	fmt.Println(word)
-}
-
-func printDebugSummary(config cli.Config, accepted, attempts, hardRejects, lowScoreRejects int, hardRuleHitCounts, softRuleHitCounts map[string]int) {
-	fmt.Println()
-	fmt.Println("Debug summary")
-	fmt.Printf("- attempts: %d\n", attempts)
-	fmt.Printf("- accepted: %d\n", accepted)
-	fmt.Printf("- hard rejects: %d\n", hardRejects)
-	fmt.Printf("- low-score rejects: %d\n", lowScoreRejects)
-	fmt.Printf("- threshold: %d\n", config.Threshold)
-	if config.SeedSet {
-		fmt.Printf("- seed: %d (provided)\n", config.RunSeed)
-	} else {
-		fmt.Printf("- seed: %d (auto-generated)\n", config.RunSeed)
-	}
-
-	fmt.Println()
-	printHardRuleHits(hardRuleHitCounts)
-	fmt.Println()
-	printSoftRuleHits(softRuleHitCounts)
-}
-
-func printHardRuleHits(hitCounts map[string]int) {
-	fmt.Println("Hard rule hits (non-zero)")
-	printed := 0
+func buildHardRuleStats(hitCounts map[string]int) []cli.RuleStat {
+	stats := make([]cli.RuleStat, 0, len(HardRules))
 	for _, rule := range HardRules {
 		hits := hitCounts[rule.Name]
 		if hits == 0 {
 			continue
 		}
-		fmt.Printf("- %s x%d: %s\n", rule.Name, hits, rule.Description)
-		printed++
+		stats = append(stats, cli.RuleStat{
+			Name:        rule.Name,
+			Hits:        hits,
+			Description: rule.Description,
+		})
 	}
-	if printed == 0 {
-		fmt.Println("- none")
-	}
+	return stats
 }
 
-func printSoftRuleHits(hitCounts map[string]int) {
-	fmt.Println("Soft rule hits (non-zero)")
-	printed := 0
+func buildSoftRuleStats(hitCounts map[string]int) []cli.RuleStat {
+	stats := make([]cli.RuleStat, 0, len(SoftRules))
 	for _, rule := range SoftRules {
 		hits := hitCounts[rule.Name]
 		if hits == 0 {
 			continue
 		}
-		fmt.Printf("- %s x%d (penalty=%d): %s\n", rule.Name, hits, rule.Penalty, rule.Description)
-		printed++
+		stats = append(stats, cli.RuleStat{
+			Name:        rule.Name,
+			Hits:        hits,
+			Penalty:     rule.Penalty,
+			Description: rule.Description,
+		})
 	}
-	if printed == 0 {
-		fmt.Println("- none")
-	}
+	return stats
 }
 
 func checkVowel(randChar string) bool {

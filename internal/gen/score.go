@@ -54,14 +54,8 @@ func ngramDelta(avgLogProb float64) int {
 	}
 }
 
-// Evaluate combines hard rejects, soft penalties, and corpus n-gram quality.
-func Evaluate(word string) (score int, hardReject bool) {
-	score, hardReject, _ = EvaluateDetailed(word)
-	return score, hardReject
-}
-
-// EvaluateDetailed includes per-rule hits for debugging and tuning.
-func EvaluateDetailed(word string) (score int, hardReject bool, debug EvalDebug) {
+// Evaluate includes per-rule hits for debugging and tuning.
+func Evaluate(word string) (score int, hardReject bool, debug EvalDebug) {
 	score = defaults.BaseScore
 
 	for _, r := range HardRules {

@@ -28,7 +28,7 @@ var (
 		'k': "hsr",
 		'l': "bcdfglmnpqrstvz",
 		'm': "bcdfglmnpstvz",
-		'n': "cdfglmnpqstvz",
+		'n': "dfglmnpqstvz",
 		'p': "hlrstw",
 		'q': "",
 		'r': "bcdfglmnpqstvwxz",
@@ -36,7 +36,7 @@ var (
 		't': "hlrsw",
 		'v': "lrv",
 		'w': "r",
-		'x': "cpst",
+		'x': "pst",
 		'z': "lr",
 	}
 	AllowedPrevConsonants = buildAllowedPrevConsonants(AllowedNextConsonants)
