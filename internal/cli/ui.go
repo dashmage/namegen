@@ -1,25 +1,10 @@
 package cli
 
-import "fmt"
+import (
+	"fmt"
 
-type RuleStat struct {
-	Name        string
-	Hits        int
-	Penalty     int
-	Description string
-}
-
-type DebugSummary struct {
-	Attempts        int
-	Accepted        int
-	HardRejects     int
-	LowScoreRejects int
-	Threshold       int
-	RunSeed         int64
-	SeedSet         bool
-	HardRuleHits    []RuleStat
-	SoftRuleHits    []RuleStat
-}
+	"github.com/dashmage/namegen/internal/gen"
+)
 
 func PrintAcceptedWord(word string, score int, debug bool) {
 	if debug {
@@ -29,26 +14,38 @@ func PrintAcceptedWord(word string, score int, debug bool) {
 	fmt.Println(word)
 }
 
-func PrintDebugSummary(summary DebugSummary) {
+func PrintRunResult(result gen.RunResult, debug bool, runSeed int64, seedSet bool) {
+	for _, candidate := range result.Words {
+		PrintAcceptedWord(candidate.Word, candidate.Score, debug)
+	}
+
+	if !debug {
+		return
+	}
+
+	PrintDebugSummary(result.Stats, runSeed, seedSet)
+}
+
+func PrintDebugSummary(summary gen.GenStats, runSeed int64, seedSet bool) {
 	fmt.Printf("\nDebug summary\n")
 	fmt.Printf("- attempts: %d\n", summary.Attempts)
 	fmt.Printf("- accepted: %d\n", summary.Accepted)
 	fmt.Printf("- hard rejects: %d\n", summary.HardRejects)
 	fmt.Printf("- low-score rejects: %d\n", summary.LowScoreRejects)
 	fmt.Printf("- threshold: %d\n", summary.Threshold)
-	if summary.SeedSet {
-		fmt.Printf("- seed: %d (provided)\n", summary.RunSeed)
+	if seedSet {
+		fmt.Printf("- seed: %d (provided)\n", runSeed)
 	} else {
-		fmt.Printf("- seed: %d (auto-generated)\n", summary.RunSeed)
+		fmt.Printf("- seed: %d (auto-generated)\n", runSeed)
 	}
 
 	fmt.Println()
-	printHardRuleHits(summary.HardRuleHits)
+	printHardRuleHits(summary.HardRuleStats())
 	fmt.Println()
-	printSoftRuleHits(summary.SoftRuleHits)
+	printSoftRuleHits(summary.SoftRuleStats())
 }
 
-func printHardRuleHits(stats []RuleStat) {
+func printHardRuleHits(stats []gen.RuleStat) {
 	fmt.Println("Hard rule hits (instant rejection)")
 	if len(stats) == 0 {
 		fmt.Println("- none")
@@ -60,7 +57,7 @@ func printHardRuleHits(stats []RuleStat) {
 	}
 }
 
-func printSoftRuleHits(stats []RuleStat) {
+func printSoftRuleHits(stats []gen.RuleStat) {
 	fmt.Println("Soft rule hits (score penalized)")
 	if len(stats) == 0 {
 		fmt.Println("- none")

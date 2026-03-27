@@ -13,5 +13,12 @@ func main() {
 	} else {
 		config.RunSeed = gen.SeedWithTime()
 	}
-	gen.RandomPronounceableWord(config)
+
+	result := gen.Generate(gen.Config{
+		Attempts:  config.Attempts,
+		Count:     config.Count,
+		Length:    config.Length,
+		Threshold: config.Threshold,
+	})
+	cli.PrintRunResult(result, config.Debug, config.RunSeed, config.SeedSet)
 }

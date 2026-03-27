@@ -5,16 +5,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dashmage/namegen/internal/cli"
 	"github.com/dashmage/namegen/internal/defaults"
 )
 
-type generationStats struct {
-	Attempts        int
-	Accepted        int
-	HardRejects     int
-	LowScoreRejects int
-	RuleHits        RuleCounters
+type Config struct {
+	Attempts  int
+	Count     int
+	Length    int
+	Threshold int
 }
 
 var rhythmTemplates = []struct {
@@ -59,81 +57,40 @@ func RandomWord(length int) string {
 	return res.String()
 }
 
-// RandomPronounceableWord generates a random word that's pronounceable
-func RandomPronounceableWord(config cli.Config) {
-	stats := generationStats{
-		RuleHits: NewRuleCounters(),
+// Generate creates pronounceable candidate words and populates stats.
+func Generate(config Config) RunResult {
+	result := RunResult{
+		Words: make([]ScoredWord, 0, config.Count),
+		Stats: GenStats{
+			Threshold: config.Threshold,
+			RuleHits:  NewRuleCounters(),
+		},
 	}
 
-	for stats.Accepted < config.Count {
-		if stats.Attempts >= config.Attempts {
+	for result.Stats.Accepted < config.Count {
+		if result.Stats.Attempts >= config.Attempts {
 			break
 		}
 
 		word := RandomWord(config.Length)
-		score, hardReject := Evaluate(word, &stats.RuleHits)
-		stats.Attempts++
+		score, hardReject := Evaluate(word, &result.Stats.RuleHits)
+		result.Stats.Attempts++
 
 		if hardReject {
-			stats.HardRejects++
+			result.Stats.HardRejects++
 			continue
 		}
 
 		if score <= config.Threshold {
-			stats.LowScoreRejects++
+			result.Stats.LowScoreRejects++
 			continue
 		}
 
-		cli.PrintAcceptedWord(word, score, config.Debug)
-		stats.Accepted++
+		result.Words = append(result.Words, ScoredWord{Word: word, Score: score})
+		result.Stats.Accepted++
 	}
 
-	if config.Debug {
-		cli.PrintDebugSummary(cli.DebugSummary{
-			Attempts:        stats.Attempts,
-			Accepted:        stats.Accepted,
-			HardRejects:     stats.HardRejects,
-			LowScoreRejects: stats.LowScoreRejects,
-			Threshold:       config.Threshold,
-			RunSeed:         config.RunSeed,
-			SeedSet:         config.SeedSet,
-			HardRuleHits:    buildHardRuleStats(stats.RuleHits),
-			SoftRuleHits:    buildSoftRuleStats(stats.RuleHits),
-		})
-	}
-}
-
-func buildHardRuleStats(hitCounts RuleCounters) []cli.RuleStat {
-	stats := make([]cli.RuleStat, 0, len(HardRules))
-	for _, rule := range HardRules {
-		hits := hitCounts.Hard[rule.Name]
-		if hits == 0 {
-			continue
-		}
-		stats = append(stats, cli.RuleStat{
-			Name:        rule.Name,
-			Hits:        hits,
-			Description: rule.Description,
-		})
-	}
-	return stats
-}
-
-func buildSoftRuleStats(hitCounts RuleCounters) []cli.RuleStat {
-	stats := make([]cli.RuleStat, 0, len(SoftRules))
-	for _, rule := range SoftRules {
-		hits := hitCounts.Soft[rule.Name]
-		if hits == 0 {
-			continue
-		}
-		stats = append(stats, cli.RuleStat{
-			Name:        rule.Name,
-			Hits:        hits,
-			Penalty:     rule.Penalty,
-			Description: rule.Description,
-		})
-	}
-	return stats
+	return result
 }
 
 func checkVowel(randChar string) bool {
