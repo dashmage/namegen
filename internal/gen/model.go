@@ -1,9 +1,20 @@
 package gen
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/dashmage/namegen/internal/defaults"
+)
+
+type probabilityBand string
+
+const (
+	probBandUnknown probabilityBand = "unknown"
+	probBandVeryLow probabilityBand = "vlow"
+	probBandLow     probabilityBand = "low"
+	probBandMid     probabilityBand = "mid"
+	probBandGood    probabilityBand = "good"
 )
 
 // BigramModel stores transition counts and smoothing configuration.
@@ -85,20 +96,41 @@ func (m *BigramModel) AvgLogProb(word string) float64 {
 	return sum / float64(steps)
 }
 
-// ScoreAdjustment maps average bigram log-probability into a score adjustment.
-// Low-probability transitions apply penalties; strong transitions can add a small bonus.
-func (m *BigramModel) ScoreAdjustment(word string) int {
-	avgLogProb := m.AvgLogProb(word)
+func probabilityBandFor(avgLogProb float64) probabilityBand {
 	switch {
 	case avgLogProb < defaults.VeryLowProbCutoff:
-		return -defaults.VeryLowProbPenalty
+		return probBandVeryLow
 	case avgLogProb < defaults.LowProbCutoff:
-		return -defaults.LowProbPenalty
+		return probBandLow
 	case avgLogProb < defaults.MidProbCutoff:
-		return -defaults.MidProbPenalty
+		return probBandMid
 	default:
-		return defaults.GoodProbBonus
+		return probBandGood
 	}
+}
+
+func probabilityBandAdjustment(band probabilityBand) int {
+	switch band {
+	case probBandVeryLow:
+		return -defaults.VeryLowProbPenalty
+	case probBandLow:
+		return -defaults.LowProbPenalty
+	case probBandMid:
+		return -defaults.MidProbPenalty
+	case probBandGood:
+		return defaults.GoodProbBonus
+	default:
+		return 0
+	}
+}
+
+// ScoreAdjustment maps average bigram log-probability into a score adjustment.
+// Low-probability transitions apply penalties; strong transitions can add a small bonus.
+func (m *BigramModel) ScoreAdjustment(word string) (adjustment int, band probabilityBand) {
+	avgLogProb := m.AvgLogProb(word)
+	fmt.Printf("word=%s, avg_log_prob=%f\n", word, avgLogProb)
+	band = probabilityBandFor(avgLogProb)
+	return probabilityBandAdjustment(band), band
 }
 
 // normalizeWord lowercases ASCII letters and removes non a-z bytes.

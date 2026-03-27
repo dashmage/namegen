@@ -1,6 +1,7 @@
 package gen
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/dashmage/namegen/internal/data"
@@ -43,15 +44,17 @@ func loadDefaultModel() (*BigramModel, error) {
 }
 
 // Evaluate scores a candidate word and records any rule hits.
-func Evaluate(word string, counters *RuleCounters) (score int, hardReject bool) {
+func Evaluate(word string, counters *RuleCounters) (score int, hardReject bool, probBand probabilityBand) {
 	score = defaults.BaseScore
+	probBand = probBandUnknown
 
 	for _, r := range HardRules {
 		if r.Check(word) {
 			if counters != nil {
 				counters.Hard[r.Name]++
 			}
-			return 0, true
+			fmt.Printf("word=%s, hardrule=%s\n", word, r.Name)
+			return 0, true, probBandUnknown
 		}
 	}
 	for _, r := range SoftRules {
@@ -60,13 +63,16 @@ func Evaluate(word string, counters *RuleCounters) (score int, hardReject bool) 
 			if counters != nil {
 				counters.Soft[r.Name]++
 			}
+			fmt.Printf("word=%s, softrule=%s\n", word, r.Name)
 		}
 	}
 
 	model, err := loadDefaultModel()
+	var adjustment int
 	if err == nil && model != nil {
-		score += model.ScoreAdjustment(word)
+		adjustment, probBand = model.ScoreAdjustment(word)
+		score += adjustment
 	}
 
-	return score, false
+	return score, false, probBand
 }

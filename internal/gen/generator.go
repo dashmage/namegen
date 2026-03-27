@@ -1,6 +1,7 @@
 package gen
 
 import (
+	"fmt"
 	"math/rand"
 	"strings"
 	"time"
@@ -73,7 +74,8 @@ func Generate(config Config) RunResult {
 		}
 
 		word := RandomWord(config.Length)
-		score, hardReject := Evaluate(word, &result.Stats.RuleHits)
+		score, hardReject, probBand := Evaluate(word, &result.Stats.RuleHits)
+		fmt.Printf("word=%s, score=%d, probBand=%s\n\n", word, score, probBand)
 		result.Stats.Attempts++
 
 		if hardReject {
@@ -86,7 +88,11 @@ func Generate(config Config) RunResult {
 			continue
 		}
 
-		result.Words = append(result.Words, ScoredWord{Word: word, Score: score})
+		result.Words = append(result.Words, ScoredWord{
+			Word:       word,
+			Score:      score,
+			BigramProb: string(probBand),
+		})
 		result.Stats.Accepted++
 	}
 

@@ -6,17 +6,17 @@ import (
 	"github.com/dashmage/namegen/internal/gen"
 )
 
-func PrintAcceptedWord(word string, score int, debug bool) {
+func PrintAcceptedWord(candidate gen.ScoredWord, debug bool) {
 	if debug {
-		fmt.Printf("%s (%d)\n", word, score)
+		fmt.Printf("%s (score=%d, bigram_prob=%s)\n", candidate.Word, candidate.Score, candidate.BigramProb)
 		return
 	}
-	fmt.Println(word)
+	fmt.Println(candidate.Word)
 }
 
 func PrintRunResult(result gen.RunResult, debug bool, runSeed int64, seedSet bool) {
 	for _, candidate := range result.Words {
-		PrintAcceptedWord(candidate.Word, candidate.Score, debug)
+		PrintAcceptedWord(candidate, debug)
 	}
 
 	if !debug {

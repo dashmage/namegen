@@ -9,7 +9,7 @@ import (
 var (
 	// Keep only non-consonant-adjacency pairs here.
 	// Consonant-consonant restrictions are handled by IllegalConsonantAdjacency.
-	AwkwardPairs            = []string{"yb", "yj"}
+	AwkwardPairs            = []string{"yb", "yj", "yf"}
 	AwkwardStarts           = []string{"ng", "pt", "kn", "pn", "tl", "sr"}
 	AwkwardEnds             = []string{"wh", "yh", "jh", "qh", "ii", "uu"}
 	RareDoubles             = []string{"jj", "vv", "qq", "xx", "zz"}
@@ -131,13 +131,13 @@ var SoftRules = []Rule{
 	{
 		Name:        "q_not_followed_by_u",
 		Description: "Penalizes q when it is not followed by u.",
-		Penalty:     20,
+		Penalty:     10,
 		Check:       QWithoutU,
 	},
 	{
 		Name:        "double_rare_letter",
 		Description: "Penalizes doubled rare letters like jj, qq, or zz.",
-		Penalty:     14,
+		Penalty:     15,
 		Check:       RepeatedRareLetter,
 	},
 	{
@@ -149,13 +149,13 @@ var SoftRules = []Rule{
 	{
 		Name:        "rare_letter_density",
 		Description: "Penalizes words with too many rare letters (j/q/x/z).",
-		Penalty:     21,
+		Penalty:     20,
 		Check:       RareLetterDensity,
 	},
 	{
 		Name:        "uncommon_ending",
 		Description: "Penalizes endings that are uncommon in English-like names.",
-		Penalty:     13,
+		Penalty:     15,
 		Check:       UncommonEnding,
 	},
 	{
@@ -173,7 +173,7 @@ var SoftRules = []Rule{
 	{
 		Name:        "double_terminal_consonant",
 		Description: "Penalizes words ending in doubled consonants.",
-		Penalty:     12,
+		Penalty:     10,
 		Check:       DoubleTerminalConsonant,
 	},
 }

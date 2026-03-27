@@ -1,8 +1,9 @@
 package gen
 
 type ScoredWord struct {
-	Word  string
-	Score int
+	Word       string
+	Score      int
+	BigramProb string
 }
 
 type RuleStat struct {
