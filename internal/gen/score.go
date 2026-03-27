@@ -13,15 +13,16 @@ var (
 	defaultModelErr  error
 )
 
-type RuleHit struct {
-	Name        string
-	Description string
-	Penalty     int
+type RuleCounters struct {
+	Hard map[string]int
+	Soft map[string]int
 }
 
-type EvalDebug struct {
-	HardRuleHits []RuleHit
-	SoftRuleHits []RuleHit
+func NewRuleCounters() RuleCounters {
+	return RuleCounters{
+		Hard: make(map[string]int),
+		Soft: make(map[string]int),
+	}
 }
 
 // loadDefaultModel trains a reusable bigram model from the embedded corpus.
@@ -54,27 +55,24 @@ func ngramDelta(avgLogProb float64) int {
 	}
 }
 
-// Evaluate includes per-rule hits for debugging and tuning.
-func Evaluate(word string) (score int, hardReject bool, debug EvalDebug) {
+// Evaluate scores a candidate word and records any rule hits.
+func Evaluate(word string, counters *RuleCounters) (score int, hardReject bool) {
 	score = defaults.BaseScore
 
 	for _, r := range HardRules {
 		if r.Check(word) {
-			debug.HardRuleHits = append(debug.HardRuleHits, RuleHit{
-				Name:        r.Name,
-				Description: r.Description,
-			})
-			return 0, true, debug
+			if counters != nil {
+				counters.Hard[r.Name]++
+			}
+			return 0, true
 		}
 	}
 	for _, r := range SoftRules {
 		if r.Check(word) {
 			score -= r.Penalty
-			debug.SoftRuleHits = append(debug.SoftRuleHits, RuleHit{
-				Name:        r.Name,
-				Description: r.Description,
-				Penalty:     r.Penalty,
-			})
+			if counters != nil {
+				counters.Soft[r.Name]++
+			}
 		}
 	}
 
@@ -83,5 +81,5 @@ func Evaluate(word string) (score int, hardReject bool, debug EvalDebug) {
 		score += ngramDelta(model.AvgLogProb(word))
 	}
 
-	return score, false, debug
+	return score, false
 }

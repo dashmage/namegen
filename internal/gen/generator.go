@@ -9,6 +9,14 @@ import (
 	"github.com/dashmage/namegen/internal/defaults"
 )
 
+type generationStats struct {
+	Attempts        int
+	Accepted        int
+	HardRejects     int
+	LowScoreRejects int
+	RuleHits        RuleCounters
+}
+
 var rhythmTemplates = []struct {
 	Pattern string
 	Weight  int
@@ -53,62 +61,52 @@ func RandomWord(length int) string {
 
 // RandomPronounceableWord generates a random word that's pronounceable
 func RandomPronounceableWord(config cli.Config) {
-	wordsGenerated := 0
-	curAttempts := 0
-	hardRejects := 0
-	lowScoreRejects := 0
-	hardRuleHitCounts := make(map[string]int)
-	softRuleHitCounts := make(map[string]int)
+	stats := generationStats{
+		RuleHits: NewRuleCounters(),
+	}
 
-	for wordsGenerated < config.Count {
-		if curAttempts >= config.Attempts {
+	for stats.Accepted < config.Count {
+		if stats.Attempts >= config.Attempts {
 			break
 		}
 
 		word := RandomWord(config.Length)
-		score, hardReject, evalDebug := Evaluate(word)
-		curAttempts++
-
-		for _, hit := range evalDebug.HardRuleHits {
-			hardRuleHitCounts[hit.Name]++
-		}
-		for _, hit := range evalDebug.SoftRuleHits {
-			softRuleHitCounts[hit.Name]++
-		}
+		score, hardReject := Evaluate(word, &stats.RuleHits)
+		stats.Attempts++
 
 		if hardReject {
-			hardRejects++
+			stats.HardRejects++
 			continue
 		}
 
 		if score <= config.Threshold {
-			lowScoreRejects++
+			stats.LowScoreRejects++
 			continue
 		}
 
 		cli.PrintAcceptedWord(word, score, config.Debug)
-		wordsGenerated++
+		stats.Accepted++
 	}
 
 	if config.Debug {
 		cli.PrintDebugSummary(cli.DebugSummary{
-			Attempts:        curAttempts,
-			Accepted:        wordsGenerated,
-			HardRejects:     hardRejects,
-			LowScoreRejects: lowScoreRejects,
+			Attempts:        stats.Attempts,
+			Accepted:        stats.Accepted,
+			HardRejects:     stats.HardRejects,
+			LowScoreRejects: stats.LowScoreRejects,
 			Threshold:       config.Threshold,
 			RunSeed:         config.RunSeed,
 			SeedSet:         config.SeedSet,
-			HardRuleHits:    buildHardRuleStats(hardRuleHitCounts),
-			SoftRuleHits:    buildSoftRuleStats(softRuleHitCounts),
+			HardRuleHits:    buildHardRuleStats(stats.RuleHits),
+			SoftRuleHits:    buildSoftRuleStats(stats.RuleHits),
 		})
 	}
 }
 
-func buildHardRuleStats(hitCounts map[string]int) []cli.RuleStat {
+func buildHardRuleStats(hitCounts RuleCounters) []cli.RuleStat {
 	stats := make([]cli.RuleStat, 0, len(HardRules))
 	for _, rule := range HardRules {
-		hits := hitCounts[rule.Name]
+		hits := hitCounts.Hard[rule.Name]
 		if hits == 0 {
 			continue
 		}
@@ -121,10 +119,10 @@ func buildHardRuleStats(hitCounts map[string]int) []cli.RuleStat {
 	return stats
 }
 
-func buildSoftRuleStats(hitCounts map[string]int) []cli.RuleStat {
+func buildSoftRuleStats(hitCounts RuleCounters) []cli.RuleStat {
 	stats := make([]cli.RuleStat, 0, len(SoftRules))
 	for _, rule := range SoftRules {
-		hits := hitCounts[rule.Name]
+		hits := hitCounts.Soft[rule.Name]
 		if hits == 0 {
 			continue
 		}

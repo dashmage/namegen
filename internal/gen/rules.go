@@ -86,20 +86,14 @@ func buildAllowedPrevConsonants(next map[byte]string) map[byte]string {
 	return prev
 }
 
-type SoftRule struct {
+type Rule struct {
 	Name        string
 	Description string
 	Penalty     int
 	Check       func(string) bool
 }
 
-type HardRule struct {
-	Name        string
-	Description string
-	Check       func(string) bool
-}
-
-var HardRules = []HardRule{
+var HardRules = []Rule{
 	{
 		Name:        "three_consecutive_consonants",
 		Description: "Rejects words with hard-to-pronounce 3-consonant runs.",
@@ -127,7 +121,7 @@ var HardRules = []HardRule{
 	},
 }
 
-var SoftRules = []SoftRule{
+var SoftRules = []Rule{
 	{
 		Name:        "awkward_sequence",
 		Description: "Penalizes impossible or very awkward letter pairs.",
