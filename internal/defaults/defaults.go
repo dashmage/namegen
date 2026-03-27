@@ -21,12 +21,12 @@ const (
 	EndToken   byte = '$'
 	VocabSize       = 28
 
-	NGramVeryLowCutoff = -4.2
-	NGramLowCutoff     = -3.6
-	NGramMidCutoff     = -3.1
+	VeryLowProbCutoff = -4.2
+	LowProbCutoff     = -3.6
+	MidProbCutoff     = -3.1
 
-	NGramVeryLowDelta = -30
-	NGramLowDelta     = -15
-	NGramMidDelta     = -5
-	NGramGoodDelta    = 5
+	VeryLowProbPenalty = 30
+	LowProbPenalty     = 15
+	MidProbPenalty     = 5
+	GoodProbBonus      = 5
 )

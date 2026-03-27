@@ -42,19 +42,6 @@ func loadDefaultModel() (*BigramModel, error) {
 	return defaultModel, defaultModelErr
 }
 
-func ngramDelta(avgLogProb float64) int {
-	switch {
-	case avgLogProb < defaults.NGramVeryLowCutoff:
-		return defaults.NGramVeryLowDelta
-	case avgLogProb < defaults.NGramLowCutoff:
-		return defaults.NGramLowDelta
-	case avgLogProb < defaults.NGramMidCutoff:
-		return defaults.NGramMidDelta
-	default:
-		return defaults.NGramGoodDelta
-	}
-}
-
 // Evaluate scores a candidate word and records any rule hits.
 func Evaluate(word string, counters *RuleCounters) (score int, hardReject bool) {
 	score = defaults.BaseScore
@@ -78,7 +65,7 @@ func Evaluate(word string, counters *RuleCounters) (score int, hardReject bool) 
 
 	model, err := loadDefaultModel()
 	if err == nil && model != nil {
-		score += ngramDelta(model.AvgLogProb(word))
+		score += model.ScoreAdjustment(word)
 	}
 
 	return score, false

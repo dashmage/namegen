@@ -45,7 +45,7 @@ At a high level, the CLI loops until it has produced the requested number of wor
 1. Build a candidate word with a weighted rhythm template (`CV`, `CVC`, `CVV`, `VC`)
 2. Apply hard rules (rules that reject the word immediately on failure)
 3. Apply soft rules (rules that subtract penalties)
-4. Add a bigram quality delta from the trained model
+4. Apply a bigram score adjustment from the trained model
 5. Accept the candidate if final score is above threshold
 
 The core flow is implemented in:
@@ -212,9 +212,9 @@ Scoring flow example:
 
 1. hard rules pass
 2. no soft penalties triggered
-3. n-gram band for `-1.719` gives a positive delta
+3. probability band for `-1.719` gives a small bonus
 4. final score stays above acceptance threshold
 5. candidate accepted
 
 ## TODO
-- Tune n-gram bands
+- Tune probability bands
