@@ -39,7 +39,7 @@ Here's all the possible flags (from `internal/cli/config.go`):
 - `--debug` print scores and generation diagnostics
 - `--tune` print stats for all randomly generated words for tuning values
 
-## How generation works
+## How does it work?
 
 At a high level, the CLI loops until it has produced the requested number of words:
 
@@ -60,12 +60,8 @@ The core flow is implemented in:
 
 Instead of drawing each letter uniformly from `a-z`, candidates are built from vowel/consonant patterns to create more natural rhythm.
 
-### Symbols
-
 - `C` = consonant
 - `V` = vowel
-
-### Weighted templates
 
 The generator samples from weighted templates:
 
@@ -82,7 +78,7 @@ Additional shaping:
 - slightly bias final character toward consonants
 - de-emphasize `y` in vowel sampling
 
-This structure dramatically improves pronounceability compared to fully uniform random letters.
+This structure dramatically improves pronounceability compared to fully uniform random letters. Check out [generator.go](./internal/gen/generator.go) to get a better idea.
 
 ## Rules: hard vs soft
 
@@ -91,34 +87,26 @@ Rules are separated by behavior:
 - Hard rules: immediate reject
 - Soft rules: keep candidate, subtract score
 
-### Hard rules (current)
+Hard rules
 
 - four consecutive consonants
 - illegal ending characters
 - 3+ same consecutive vowels
 
-### Soft rules (current)
+Soft rules
 
 - forbidden letter pairs (`qx`, `jq`, `qj`, etc.)
 - `q` not followed by `u`
 - repeated rare doubles (`jj`, `vv`, `qq`, `xx`, `zz`)
-- awkward boundary clusters (certain starts/ends)
+- uncommon sequences
 
 ## Bigram model
 
 The bigram model scores how plausible adjacent letter transitions are, based on a corpus.
 
-Corpus file:
-
-- `internal/data/names.txt`
-
-Loader:
-
-- `internal/data/corpus.go`
-
-Model:
-
-- `internal/gen/bigram.go`
+- [Corpus file](./internal/data/names.txt)
+- [Loader](./internal/data/corpus.go)
+- [Model](./internal/gen/bigram.go)
 
 ### BigramModel fields
 
@@ -147,7 +135,7 @@ For each corpus word:
    - `Count[(a,b)]++`
    - `Row[a]++`
 
-### Why Laplace smoothing
+### Laplace smoothing
 
 Without smoothing, unseen transitions have probability 0, which can collapse the whole word probability.
 
@@ -157,7 +145,7 @@ Laplace smoothing avoids that:
 
 This keeps unseen pairs possible but still low-probability.
 
-### Why log probability
+### Log probability
 
 Word probability is a product of many small values. Multiplication underflows and is harder to debug.
 
@@ -167,7 +155,7 @@ Using logs converts products into sums:
 
 The model uses **average** log probability so scores are comparable across lengths.
 
-## End-to-end example
+### End-to-end example
 
 Corpus words:
 
@@ -216,6 +204,3 @@ Scoring flow example:
 3. probability band for `-1.719` gives a small bonus
 4. final score stays above acceptance threshold
 5. candidate accepted
-
-## TODO
-- Tune probability bands
