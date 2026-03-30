@@ -10,6 +10,14 @@ The current implementation uses three layers:
 2. Rule-based filtering and penalties
 3. Corpus-trained bigram scoring
 
+## Install
+```bash
+git clone https://github.com/dashmage/namegen.git
+cd namegen
+go build
+./namegen
+```
+
 ## Usage
 ```bash
 # generate 20 6-letter names
@@ -54,7 +62,7 @@ The core flow is implemented in:
 - `internal/gen/generator.go`
 - `internal/gen/rules.go`
 - `internal/gen/score.go`
-- `internal/gen/bigram.go`
+- `internal/gen/model.go`
 
 ## Template-based random word generation
 
@@ -106,7 +114,7 @@ The bigram model scores how plausible adjacent letter transitions are, based on 
 
 - [Corpus file](./internal/data/names.txt)
 - [Loader](./internal/data/corpus.go)
-- [Model](./internal/gen/bigram.go)
+- [Model](./internal/gen/model.go)
 
 ### BigramModel fields
 
