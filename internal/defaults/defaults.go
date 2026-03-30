@@ -1,7 +1,7 @@
 package defaults
 
 const (
-	AcceptThreshold = 90
+	AcceptThreshold = 80
 
 	CLIAttemptsDefault = 200
 	CLICountDefault    = 10
@@ -15,7 +15,7 @@ const (
 
 	FinalConsonantBiasPercent = 35
 
-	IllegalEndingChars = "qjvhw"
+	IllegalEndingChars = "qjvw"
 
 	StartToken byte = '^'
 	EndToken   byte = '$'
@@ -26,7 +26,7 @@ const (
 	MidProbCutoff     = -3.1
 
 	VeryLowProbPenalty = 30
-	LowProbPenalty     = 15
-	MidProbPenalty     = 5
+	LowProbPenalty     = 20
+	MidProbPenalty     = 10
 	GoodProbBonus      = 5
 )

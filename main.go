@@ -19,6 +19,7 @@ func main() {
 		Count:     config.Count,
 		Length:    config.Length,
 		Threshold: config.Threshold,
+		Tune:      config.Tune,
 	})
-	cli.PrintRunResult(result, config.Debug, config.RunSeed, config.SeedSet)
+	cli.PrintRunResult(result, config.Debug, config.Tune, config.RunSeed, config.SeedSet)
 }

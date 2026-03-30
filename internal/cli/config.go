@@ -14,10 +14,11 @@ type Config struct {
 	SeedSet   bool
 	RunSeed   int64
 	Debug     bool
+	Tune      bool
 	Threshold int
 }
 
-func NewConfig(attempts, count, length int, seed int64, seedSet, debug bool, threshold int) Config {
+func NewConfig(attempts, count, length int, seed int64, seedSet, debug, tune bool, threshold int) Config {
 	return Config{
 		Attempts:  attempts,
 		Count:     count,
@@ -26,6 +27,7 @@ func NewConfig(attempts, count, length int, seed int64, seedSet, debug bool, thr
 		SeedSet:   seedSet,
 		RunSeed:   0,
 		Debug:     debug,
+		Tune:      tune,
 		Threshold: threshold,
 	}
 }
@@ -36,6 +38,7 @@ func Parse() Config {
 	length := flag.Int("length", defaults.CLILengthDefault, "length of generated word(s) (default: 5)")
 	seed := flag.Int64("seed", 0, "RNG seed for reproducible output (optional)")
 	debug := flag.Bool("debug", false, "print scores and generation diagnostics")
+	tune := flag.Bool("tune", false, "print per-attempt score breakdown for tuning")
 	threshold := flag.Int("threshold", defaults.AcceptThreshold, "minimum score required for acceptance")
 	flag.Parse()
 
@@ -46,6 +49,6 @@ func Parse() Config {
 		}
 	})
 
-	config := NewConfig(*attempts, *count, *length, *seed, seedSet, *debug, *threshold)
+	config := NewConfig(*attempts, *count, *length, *seed, seedSet, *debug, *tune, *threshold)
 	return config
 }

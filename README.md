@@ -35,8 +35,9 @@ Here's all the possible flags (from `internal/cli/config.go`):
 - `--count` number of words to generate
 - `--length` generated word length
 - `--seed` optional RNG seed for reproducible output
-- `--debug` print scores and generation diagnostics
 - `--threshold` minimum acceptance score
+- `--debug` print scores and generation diagnostics
+- `--tune` print stats for all randomly generated words for tuning values
 
 ## How generation works
 

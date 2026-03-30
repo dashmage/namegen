@@ -1,7 +1,6 @@
 package gen
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/dashmage/namegen/internal/defaults"
@@ -126,11 +125,10 @@ func probabilityBandAdjustment(band probabilityBand) int {
 
 // ScoreAdjustment maps average bigram log-probability into a score adjustment.
 // Low-probability transitions apply penalties; strong transitions can add a small bonus.
-func (m *BigramModel) ScoreAdjustment(word string) (adjustment int, band probabilityBand) {
-	avgLogProb := m.AvgLogProb(word)
-	fmt.Printf("word=%s, avg_log_prob=%f\n", word, avgLogProb)
+func (m *BigramModel) ScoreAdjustment(word string) (adjustment int, band probabilityBand, avgLogProb float64) {
+	avgLogProb = m.AvgLogProb(word)
 	band = probabilityBandFor(avgLogProb)
-	return probabilityBandAdjustment(band), band
+	return probabilityBandAdjustment(band), band, avgLogProb
 }
 
 // normalizeWord lowercases ASCII letters and removes non a-z bytes.

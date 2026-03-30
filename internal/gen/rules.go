@@ -9,30 +9,20 @@ import (
 var (
 	// Keep only non-consonant-adjacency pairs here.
 	// Consonant-consonant restrictions are handled by IllegalConsonantAdjacency.
-	AwkwardPairs            = []string{"yb", "yj", "yf"}
-	AwkwardStarts           = []string{"ng", "pt", "kn", "pn", "tl", "sr"}
-	AwkwardEnds             = []string{"wh", "yh", "jh", "qh", "ii", "uu"}
-	RareDoubles             = []string{"jj", "vv", "qq", "xx", "zz"}
-	UncommonEnds            = []string{"iq", "uq", "vf"}
-	AwkwardTerminalClusters = []string{"hwl", "dzd", "gfm", "ynk", "fdd", "zdd", "ddl", "lzd", "vdd", "wlk"}
+	UncommonSequences = []string{"yb", "yj", "yf", "jj", "vv", "qq", "xx", "zz", "iq", "iy", "uq", "vf", "wh", "yh", "jh", "qh", "ii", "uu", "hwl", "dzd", "gfm", "ynk", "fdd", "zdd", "ddl", "lzd", "vdd", "wlk"}
 
 	// Missing keys mean no explicit adjacency restriction for that consonant.
 	AllowedNextConsonants = map[byte]string{
 		'b': "lr",
 		'c': "hlrstw",
 		'd': "lrw",
-		'f': "lr",
-		'g': "hlnrw",
-		'h': "rw",
+		'f': "klrst",
+		'g': "hlnrsw",
+		'h': "grsw",
 		'j': "",
 		'k': "hsr",
-		'l': "bcdfglmnpqrstvz",
-		'm': "bcdfglmnpstvz",
-		'n': "dfglmnpqstvz",
 		'p': "hlrstw",
 		'q': "",
-		'r': "bcdfglmnpqstvwxz",
-		's': "bcdfghklmnpqrtvwxz",
 		't': "hlrsw",
 		'v': "lrv",
 		'w': "r",
@@ -123,10 +113,10 @@ var HardRules = []Rule{
 
 var SoftRules = []Rule{
 	{
-		Name:        "awkward_sequence",
+		Name:        "uncommon_sequence",
 		Description: "Penalizes impossible or very awkward letter pairs.",
 		Penalty:     25,
-		Check:       AwkwardSequence,
+		Check:       UncommonSequence,
 	},
 	{
 		Name:        "q_not_followed_by_u",
@@ -135,46 +125,22 @@ var SoftRules = []Rule{
 		Check:       QWithoutU,
 	},
 	{
-		Name:        "double_rare_letter",
-		Description: "Penalizes doubled rare letters like jj, qq, or zz.",
-		Penalty:     15,
-		Check:       RepeatedRareLetter,
-	},
-	{
-		Name:        "awkward_boundary_cluster",
-		Description: "Penalizes uncommon start or end boundary clusters.",
-		Penalty:     5,
-		Check:       AwkwardBoundary,
-	},
-	{
 		Name:        "rare_letter_density",
 		Description: "Penalizes words with too many rare letters (j/q/x/z).",
 		Penalty:     20,
 		Check:       RareLetterDensity,
 	},
 	{
-		Name:        "uncommon_ending",
-		Description: "Penalizes endings that are uncommon in English-like names.",
-		Penalty:     15,
-		Check:       UncommonEnding,
-	},
-	{
 		Name:        "repeated_same_vowel_pair",
 		Description: "Penalizes doubled identical vowels that often sound awkward.",
-		Penalty:     15,
+		Penalty:     10,
 		Check:       RepeatedSameVowelPair,
 	},
 	{
-		Name:        "awkward_terminal_cluster",
-		Description: "Penalizes harsh multi-letter ending clusters.",
-		Penalty:     15,
-		Check:       AwkwardTerminalCluster,
-	},
-	{
-		Name:        "double_terminal_consonant",
+		Name:        "double_consonant_ending",
 		Description: "Penalizes words ending in doubled consonants.",
 		Penalty:     10,
-		Check:       DoubleTerminalConsonant,
+		Check:       DoubleConsonantEnding,
 	},
 }
 
@@ -215,9 +181,9 @@ func IllegalEnding(word string) bool {
 	return strings.Contains(defaults.IllegalEndingChars, string(word[len(word)-1]))
 }
 
-// AwkwardSequence returns true if a word contains an impossible sequence of letters
-func AwkwardSequence(word string) bool {
-	for _, seq := range AwkwardPairs {
+// UncommonSequence returns true if a word contains a rare sequence of letters
+func UncommonSequence(word string) bool {
+	for _, seq := range UncommonSequences {
 		if strings.Contains(word, seq) {
 			return true
 		}
@@ -232,31 +198,6 @@ func QWithoutU(word string) bool {
 			continue
 		}
 		if i+1 >= len(word) || word[i+1] != 'u' {
-			return true
-		}
-	}
-	return false
-}
-
-// RepeatedRareLetter returns true if a rare double letter appears.
-func RepeatedRareLetter(word string) bool {
-	for _, seq := range RareDoubles {
-		if strings.Contains(word, seq) {
-			return true
-		}
-	}
-	return false
-}
-
-// AwkwardBoundary returns true if a word has awkward start/end clusters.
-func AwkwardBoundary(word string) bool {
-	for _, prefix := range AwkwardStarts {
-		if strings.HasPrefix(word, prefix) {
-			return true
-		}
-	}
-	for _, suffix := range AwkwardEnds {
-		if strings.HasSuffix(word, suffix) {
 			return true
 		}
 	}
@@ -293,16 +234,6 @@ func RareLetterDensity(word string) bool {
 	return false
 }
 
-// UncommonEnding returns true if a word ends with an uncommon English-like suffix.
-func UncommonEnding(word string) bool {
-	for _, suffix := range UncommonEnds {
-		if strings.HasSuffix(word, suffix) {
-			return true
-		}
-	}
-	return false
-}
-
 // RepeatedSameVowelPair returns true if identical vowels repeat back-to-back.
 func RepeatedSameVowelPair(word string) bool {
 	for i := 1; i < len(word); i++ {
@@ -316,18 +247,8 @@ func RepeatedSameVowelPair(word string) bool {
 	return false
 }
 
-// AwkwardTerminalCluster returns true if a word ends with a known awkward terminal cluster.
-func AwkwardTerminalCluster(word string) bool {
-	for _, suffix := range AwkwardTerminalClusters {
-		if strings.HasSuffix(word, suffix) {
-			return true
-		}
-	}
-	return false
-}
-
-// DoubleTerminalConsonant returns true when the word ends with a repeated consonant.
-func DoubleTerminalConsonant(word string) bool {
+// DoubleConsonantEnding returns true when the word ends with a repeated consonant.
+func DoubleConsonantEnding(word string) bool {
 	if len(word) < 2 {
 		return false
 	}

@@ -1,7 +1,6 @@
 package gen
 
 import (
-	"fmt"
 	"math/rand"
 	"strings"
 	"time"
@@ -14,6 +13,7 @@ type Config struct {
 	Count     int
 	Length    int
 	Threshold int
+	Tune      bool
 }
 
 var rhythmTemplates = []struct {
@@ -67,6 +67,9 @@ func Generate(config Config) RunResult {
 			RuleHits:  NewRuleCounters(),
 		},
 	}
+	if config.Tune {
+		result.TuneEntries = make([]TuneEntry, 0, config.Attempts)
+	}
 
 	for result.Stats.Accepted < config.Count {
 		if result.Stats.Attempts >= config.Attempts {
@@ -74,26 +77,49 @@ func Generate(config Config) RunResult {
 		}
 
 		word := RandomWord(config.Length)
-		score, hardReject, probBand := Evaluate(word, &result.Stats.RuleHits)
-		fmt.Printf("word=%s, score=%d, probBand=%s\n\n", word, score, probBand)
+		evaluation := Evaluate(word, &result.Stats.RuleHits, config.Tune)
 		result.Stats.Attempts++
 
-		if hardReject {
+		entry := TuneEntry{
+			Word:             word,
+			Score:            evaluation.Score,
+			Threshold:        config.Threshold,
+			HardRule:         evaluation.HardRule,
+			SoftRules:        append([]RulePenalty(nil), evaluation.SoftRules...),
+			BigramProb:       string(evaluation.ProbBand),
+			AvgLogProb:       evaluation.AvgLogProb,
+			BigramAdjustment: evaluation.BigramAdjustment,
+		}
+
+		if evaluation.HardReject {
 			result.Stats.HardRejects++
+			entry.RejectReason = "hard_rule"
+			if config.Tune {
+				result.TuneEntries = append(result.TuneEntries, entry)
+			}
 			continue
 		}
 
-		if score <= config.Threshold {
+		if evaluation.Score <= config.Threshold {
 			result.Stats.LowScoreRejects++
+			entry.RejectReason = "low_score"
+			if config.Tune {
+				result.TuneEntries = append(result.TuneEntries, entry)
+			}
 			continue
 		}
 
 		result.Words = append(result.Words, ScoredWord{
 			Word:       word,
-			Score:      score,
-			BigramProb: string(probBand),
+			Score:      evaluation.Score,
+			BigramProb: string(evaluation.ProbBand),
 		})
 		result.Stats.Accepted++
+		entry.Accepted = true
+		entry.RejectReason = "accepted"
+		if config.Tune {
+			result.TuneEntries = append(result.TuneEntries, entry)
+		}
 	}
 
 	return result

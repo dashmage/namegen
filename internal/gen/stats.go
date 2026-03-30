@@ -6,6 +6,12 @@ type ScoredWord struct {
 	BigramProb string
 }
 
+type RulePenalty struct {
+	Name        string
+	Penalty     int
+	Description string
+}
+
 type RuleStat struct {
 	Name        string
 	Hits        int
@@ -23,8 +29,22 @@ type GenStats struct {
 }
 
 type RunResult struct {
-	Words []ScoredWord
-	Stats GenStats
+	Words       []ScoredWord
+	Stats       GenStats
+	TuneEntries []TuneEntry
+}
+
+type TuneEntry struct {
+	Word             string
+	Score            int
+	Threshold        int
+	Accepted         bool
+	RejectReason     string
+	HardRule         string
+	SoftRules        []RulePenalty
+	BigramProb       string
+	AvgLogProb       float64
+	BigramAdjustment int
 }
 
 func (s GenStats) HardRuleStats() []RuleStat {
