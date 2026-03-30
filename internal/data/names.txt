@@ -1,5 +1,5 @@
 # Name corpus used for bigram training
-# Sources: SSA Top Names Over the Last 100 Years (1925-2024) + starter entries
+# Sources: SSA Top Names Over the Last 100 Years (1925-2024), random ones scraped from the web
 
 aaron
 abbott
