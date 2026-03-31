@@ -89,11 +89,10 @@ func Evaluate(word string, hits *RuleHits, captureAttemptDetails bool) Evaluatio
 	}
 
 	model, err := loadDefaultModel()
-	var adjustment int
 	if err == nil && model != nil {
-		adjustment, evaluation.ProbabilityBand, evaluation.AvgLogProb = model.ScoreAdjustment(word)
-		evaluation.BigramAdjustment = adjustment
-		evaluation.Score += adjustment
+		evaluation.ProbabilityBand, evaluation.AvgLogProb = model.ScoreAdjustment(word)
+		evaluation.BigramAdjustment = evaluation.ProbabilityBand.Value
+		evaluation.Score += evaluation.BigramAdjustment
 	}
 
 	return evaluation

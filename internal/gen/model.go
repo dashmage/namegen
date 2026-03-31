@@ -6,14 +6,17 @@ import (
 	"github.com/dashmage/namegen/internal/defaults"
 )
 
-type ProbabilityBand string
+type ProbabilityBand struct {
+	Name  string
+	Value int
+}
 
-const (
-	probBandUnknown ProbabilityBand = "unknown"
-	probBandVeryLow ProbabilityBand = "vlow"
-	probBandLow     ProbabilityBand = "low"
-	probBandMid     ProbabilityBand = "mid"
-	probBandGood    ProbabilityBand = "good"
+var (
+	probBandUnknown = ProbabilityBand{Name: "unknown", Value: 0}
+	probBandVeryLow = ProbabilityBand{Name: "vlow", Value: -defaults.VeryLowProbPenalty}
+	probBandLow     = ProbabilityBand{Name: "low", Value: -defaults.LowProbPenalty}
+	probBandMid     = ProbabilityBand{Name: "mid", Value: -defaults.MidProbPenalty}
+	probBandGood    = ProbabilityBand{Name: "good", Value: defaults.GoodProbBonus}
 )
 
 // BigramModel stores transition counts and smoothing configuration.
@@ -109,28 +112,12 @@ func probabilityBandFor(avgLogProb float64) ProbabilityBand {
 	}
 }
 
-// probabilityBandAdjustment returns the score adjustment penalty/ bonus for a particular band
-func probabilityBandAdjustment(band ProbabilityBand) int {
-	switch band {
-	case probBandVeryLow:
-		return -defaults.VeryLowProbPenalty
-	case probBandLow:
-		return -defaults.LowProbPenalty
-	case probBandMid:
-		return -defaults.MidProbPenalty
-	case probBandGood:
-		return defaults.GoodProbBonus
-	default:
-		return 0
-	}
-}
-
 // ScoreAdjustment maps average bigram log-probability into a score adjustment.
 // Low-probability transitions apply penalties; strong transitions can add a small bonus.
-func (m *BigramModel) ScoreAdjustment(word string) (adjustment int, band ProbabilityBand, avgLogProb float64) {
+func (m *BigramModel) ScoreAdjustment(word string) (band ProbabilityBand, avgLogProb float64) {
 	avgLogProb = m.AvgLogProb(word)
 	band = probabilityBandFor(avgLogProb)
-	return probabilityBandAdjustment(band), band, avgLogProb
+	return band, avgLogProb
 }
 
 // normalizeWord lowercases ASCII letters and removes non a-z bytes.

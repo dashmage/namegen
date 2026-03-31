@@ -11,7 +11,7 @@ import (
 // PrintAcceptedWord prints an accepted candidate in concise or verbose form.
 func PrintAcceptedWord(candidate gen.ScoredWord, verbose bool) {
 	if verbose {
-		fmt.Printf("%s (score=%d, probability_band=%s)\n", candidate.Word, candidate.Score, candidate.ProbabilityBand)
+		fmt.Printf("%s (score=%d, probability_band=%s)\n", candidate.Word, candidate.Score, candidate.ProbabilityBand.Name)
 		return
 	}
 	fmt.Println(candidate.Word)
@@ -60,10 +60,10 @@ func PrintTuneReport(result gen.RunResult, seed int64, userSeed bool) {
 		fmt.Printf("  word=%s score=%d threshold=%d decision=%s\n", entry.Word, entry.Score, entry.Threshold, decision)
 		fmt.Printf("  soft_rules=%s\n", formatSoftRules(entry.SoftRules))
 		if math.IsNaN(entry.AvgLogProb) {
-			fmt.Printf("  bigram=unavailable band=%s adjustment=%d\n", entry.ProbabilityBand, entry.BigramAdjustment)
+			fmt.Printf("  bigram=unavailable band=%s adjustment=%d\n", entry.ProbabilityBand.Name, entry.BigramAdjustment)
 			continue
 		}
-		fmt.Printf("  bigram_avg_log_prob=%.4f band=%s adjustment=%d\n", entry.AvgLogProb, entry.ProbabilityBand, entry.BigramAdjustment)
+		fmt.Printf("  bigram_avg_log_prob=%.4f band=%s adjustment=%d\n", entry.AvgLogProb, entry.ProbabilityBand.Name, entry.BigramAdjustment)
 	}
 }
 
