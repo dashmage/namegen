@@ -20,21 +20,32 @@ go build
 
 ## Usage
 ```bash
-# generate 20 6-letter names
-$ namegen --count=20 --length=6
+# by default, namegen generates 10 random 5-letter names
+$ namegen
+matog
+sebeg
+xaire
+cuzer
+moevy
+lagok
+hukar
+pemox
+pasit
+rioqu
+
+# generate 3 6-letter names
+$ namegen --count=3 --length=6
 nezila
 pepyom
-leisof
-rigahu
-deypoy
+fozlar
 
 # optional seed value for deterministic output
-$ namegen --count=20 --length=5 --seed=42
-wuyay
+$ namegen --count=5 --length=5 --seed=42
 libuf
 padai
 saire
 keipy
+jifat
 ```
 
 Here's all the possible flags (from `internal/cli/config.go`):
