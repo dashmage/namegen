@@ -148,25 +148,9 @@ var SoftRules = []Rule{
 func ThreeConsecutiveConsonants(word string) bool {
 	var counter int
 	for i := range len(word) {
-		if !checkVowel(string(word[i])) {
+		if !isVowel(word[i]) {
 			counter++
 			if counter == 3 {
-				return true
-			}
-		} else {
-			counter = 0
-		}
-	}
-	return false
-}
-
-// ConsecutiveConsonants returns true if 4 or more consecutive consonants are present
-func ConsecutiveConsonants(word string) bool {
-	var counter int
-	for i := range len(word) {
-		if !checkVowel(string(word[i])) {
-			counter++
-			if counter == 4 {
 				return true
 			}
 		} else {
@@ -240,7 +224,7 @@ func RepeatedSameVowelPair(word string) bool {
 		if word[i] != word[i-1] {
 			continue
 		}
-		if checkVowel(string(word[i])) {
+		if isVowel(word[i]) {
 			return true
 		}
 	}
@@ -254,7 +238,7 @@ func DoubleConsonantEnding(word string) bool {
 	}
 	last := word[len(word)-1]
 	prev := word[len(word)-2]
-	return last == prev && !checkVowel(string(last))
+	return last == prev && !isVowel(last)
 }
 
 // IllegalConsonantAdjacency returns true if a consonant pair violates directional allow-lists.
@@ -263,7 +247,7 @@ func IllegalConsonantAdjacency(word string) bool {
 		left := word[i]
 		right := word[i+1]
 
-		if checkVowel(string(left)) || checkVowel(string(right)) {
+		if isVowel(left) || isVowel(right) {
 			continue
 		}
 

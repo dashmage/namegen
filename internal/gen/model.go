@@ -6,21 +6,21 @@ import (
 	"github.com/dashmage/namegen/internal/defaults"
 )
 
-type probabilityBand string
+type ProbabilityBand string
 
 const (
-	probBandUnknown probabilityBand = "unknown"
-	probBandVeryLow probabilityBand = "vlow"
-	probBandLow     probabilityBand = "low"
-	probBandMid     probabilityBand = "mid"
-	probBandGood    probabilityBand = "good"
+	probBandUnknown ProbabilityBand = "unknown"
+	probBandVeryLow ProbabilityBand = "vlow"
+	probBandLow     ProbabilityBand = "low"
+	probBandMid     ProbabilityBand = "mid"
+	probBandGood    ProbabilityBand = "good"
 )
 
 // BigramModel stores transition counts and smoothing configuration.
 type BigramModel struct {
-	Count map[[2]byte]int // bigram counts
-	Row   map[byte]int    // outgoing totals per first char
-	Alpha float64         // laplace smoothing factor
+	BigramCounts map[[2]byte]int // bigram counts
+	RowTotals    map[byte]int    // outgoing totals per first char
+	Alpha        float64         // laplace smoothing factor
 }
 
 // NewBigramModel creates a model with Laplace smoothing parameter alpha.
@@ -31,9 +31,9 @@ func NewBigramModel(alpha float64) *BigramModel {
 	}
 
 	return &BigramModel{
-		Count: make(map[[2]byte]int),
-		Row:   make(map[byte]int),
-		Alpha: alpha,
+		BigramCounts: make(map[[2]byte]int),
+		RowTotals:    make(map[byte]int),
+		Alpha:        alpha,
 	}
 }
 
@@ -54,8 +54,8 @@ func (m *BigramModel) Train(words []string) {
 			a := buf[i]
 			b := buf[i+1]
 			key := [2]byte{a, b}
-			m.Count[key]++
-			m.Row[a]++
+			m.BigramCounts[key]++
+			m.RowTotals[a]++
 		}
 	}
 }
@@ -63,8 +63,8 @@ func (m *BigramModel) Train(words []string) {
 // LogProb returns log P(b|a) with Laplace smoothing.
 func (m *BigramModel) LogProb(a, b byte) float64 {
 	key := [2]byte{a, b}
-	numerator := float64(m.Count[key]) + m.Alpha
-	denominator := float64(m.Row[a]) + m.Alpha*float64(defaults.VocabSize)
+	numerator := float64(m.BigramCounts[key]) + m.Alpha
+	denominator := float64(m.RowTotals[a]) + m.Alpha*float64(defaults.VocabSize)
 	return math.Log(numerator / denominator)
 }
 
@@ -95,7 +95,8 @@ func (m *BigramModel) AvgLogProb(word string) float64 {
 	return sum / float64(steps)
 }
 
-func probabilityBandFor(avgLogProb float64) probabilityBand {
+// probabilityBandFor returns the probability band name for a particular cutoff value
+func probabilityBandFor(avgLogProb float64) ProbabilityBand {
 	switch {
 	case avgLogProb < defaults.VeryLowProbCutoff:
 		return probBandVeryLow
@@ -108,7 +109,8 @@ func probabilityBandFor(avgLogProb float64) probabilityBand {
 	}
 }
 
-func probabilityBandAdjustment(band probabilityBand) int {
+// probabilityBandAdjustment returns the score adjustment penalty/ bonus for a particular band
+func probabilityBandAdjustment(band ProbabilityBand) int {
 	switch band {
 	case probBandVeryLow:
 		return -defaults.VeryLowProbPenalty
@@ -125,7 +127,7 @@ func probabilityBandAdjustment(band probabilityBand) int {
 
 // ScoreAdjustment maps average bigram log-probability into a score adjustment.
 // Low-probability transitions apply penalties; strong transitions can add a small bonus.
-func (m *BigramModel) ScoreAdjustment(word string) (adjustment int, band probabilityBand, avgLogProb float64) {
+func (m *BigramModel) ScoreAdjustment(word string) (adjustment int, band ProbabilityBand, avgLogProb float64) {
 	avgLogProb = m.AvgLogProb(word)
 	band = probabilityBandFor(avgLogProb)
 	return probabilityBandAdjustment(band), band, avgLogProb

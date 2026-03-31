@@ -8,22 +8,24 @@ import (
 	"github.com/dashmage/namegen/internal/gen"
 )
 
+// PrintAcceptedWord prints an accepted candidate in concise or verbose form.
 func PrintAcceptedWord(candidate gen.ScoredWord, verbose bool) {
 	if verbose {
-		fmt.Printf("%s (score=%d, bigram_prob=%s)\n", candidate.Word, candidate.Score, candidate.BigramProb)
+		fmt.Printf("%s (score=%d, probability_band=%s)\n", candidate.Word, candidate.Score, candidate.ProbabilityBand)
 		return
 	}
 	fmt.Println(candidate.Word)
 }
 
-func PrintRunResult(result gen.RunResult, debug, tune bool, runSeed int64, seedSet bool) {
+// PrintRunResult prints accepted words and optional debug or tuning output.
+func PrintRunResult(result gen.RunResult, debug, tune bool, seed int64, userSeed bool) {
 	verbose := debug || tune
 	for _, candidate := range result.Words {
 		PrintAcceptedWord(candidate, verbose)
 	}
 
 	if tune {
-		PrintTuneReport(result, runSeed, seedSet)
+		PrintTuneReport(result, seed, userSeed)
 		return
 	}
 
@@ -31,20 +33,21 @@ func PrintRunResult(result gen.RunResult, debug, tune bool, runSeed int64, seedS
 		return
 	}
 
-	PrintDebugSummary(result.Stats, runSeed, seedSet)
+	PrintDebugSummary(result.Stats, seed, userSeed)
 }
 
-func PrintTuneReport(result gen.RunResult, runSeed int64, seedSet bool) {
-	PrintDebugSummary(result.Stats, runSeed, seedSet)
+// PrintTuneReport prints debug stats and per-attempt tuning diagnostics.
+func PrintTuneReport(result gen.RunResult, seed int64, userSeed bool) {
+	PrintDebugSummary(result.Stats, seed, userSeed)
 
 	fmt.Println()
-	fmt.Println("Tune entries (all attempts)")
-	if len(result.TuneEntries) == 0 {
+	fmt.Println("Generation attempts (all attempts)")
+	if len(result.GenAttempts) == 0 {
 		fmt.Println("- none")
 		return
 	}
 
-	for i, entry := range result.TuneEntries {
+	for i, entry := range result.GenAttempts {
 		decision := "accepted"
 		if !entry.Accepted {
 			decision = "rejected:" + entry.RejectReason
@@ -57,13 +60,14 @@ func PrintTuneReport(result gen.RunResult, runSeed int64, seedSet bool) {
 		fmt.Printf("  word=%s score=%d threshold=%d decision=%s\n", entry.Word, entry.Score, entry.Threshold, decision)
 		fmt.Printf("  soft_rules=%s\n", formatSoftRules(entry.SoftRules))
 		if math.IsNaN(entry.AvgLogProb) {
-			fmt.Printf("  bigram=unavailable band=%s adjustment=%d\n", entry.BigramProb, entry.BigramAdjustment)
+			fmt.Printf("  bigram=unavailable band=%s adjustment=%d\n", entry.ProbabilityBand, entry.BigramAdjustment)
 			continue
 		}
-		fmt.Printf("  bigram_avg_log_prob=%.4f band=%s adjustment=%d\n", entry.AvgLogProb, entry.BigramProb, entry.BigramAdjustment)
+		fmt.Printf("  bigram_avg_log_prob=%.4f band=%s adjustment=%d\n", entry.AvgLogProb, entry.ProbabilityBand, entry.BigramAdjustment)
 	}
 }
 
+// formatSoftRules formats soft-rule penalties as comma-separated labels.
 func formatSoftRules(rules []gen.RulePenalty) string {
 	if len(rules) == 0 {
 		return "none"
@@ -77,17 +81,18 @@ func formatSoftRules(rules []gen.RulePenalty) string {
 	return strings.Join(parts, ",")
 }
 
-func PrintDebugSummary(summary gen.GenStats, runSeed int64, seedSet bool) {
+// PrintDebugSummary prints aggregate generation counts and rule hit summaries.
+func PrintDebugSummary(summary gen.GenStats, seed int64, userSeed bool) {
 	fmt.Printf("\nDebug summary\n")
 	fmt.Printf("- attempts: %d\n", summary.Attempts)
 	fmt.Printf("- accepted: %d\n", summary.Accepted)
 	fmt.Printf("- hard rejects: %d\n", summary.HardRejects)
 	fmt.Printf("- low-score rejects: %d\n", summary.LowScoreRejects)
 	fmt.Printf("- threshold: %d\n", summary.Threshold)
-	if seedSet {
-		fmt.Printf("- seed: %d (provided)\n", runSeed)
+	if userSeed {
+		fmt.Printf("- seed: %d (provided)\n", seed)
 	} else {
-		fmt.Printf("- seed: %d (auto-generated)\n", runSeed)
+		fmt.Printf("- seed: %d (auto-generated)\n", seed)
 	}
 
 	fmt.Println()
@@ -96,6 +101,7 @@ func PrintDebugSummary(summary gen.GenStats, runSeed int64, seedSet bool) {
 	printSoftRuleHits(summary.SoftRuleStats())
 }
 
+// printHardRuleHits prints hard-rule hit counts and descriptions.
 func printHardRuleHits(stats []gen.RuleStat) {
 	fmt.Println("Hard rule hits (instant rejection)")
 	if len(stats) == 0 {
@@ -108,6 +114,7 @@ func printHardRuleHits(stats []gen.RuleStat) {
 	}
 }
 
+// printSoftRuleHits prints soft-rule hit counts, descriptions, and penalties.
 func printSoftRuleHits(stats []gen.RuleStat) {
 	fmt.Println("Soft rule hits (score penalized)")
 	if len(stats) == 0 {

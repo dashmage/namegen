@@ -2,37 +2,36 @@ package cli
 
 import (
 	"flag"
+	"time"
 
 	"github.com/dashmage/namegen/internal/defaults"
 )
 
-type Config struct {
+type CLIConfig struct {
 	Attempts  int
 	Count     int
 	Length    int
 	Seed      int64
-	SeedSet   bool
-	RunSeed   int64
+	UserSeed  bool
 	Debug     bool
 	Tune      bool
 	Threshold int
 }
 
-func NewConfig(attempts, count, length int, seed int64, seedSet, debug, tune bool, threshold int) Config {
-	return Config{
+func NewCLIConfig(attempts, count, length int, seed int64, userSeed, debug, tune bool, threshold int) CLIConfig {
+	return CLIConfig{
 		Attempts:  attempts,
 		Count:     count,
 		Length:    length,
 		Seed:      seed,
-		SeedSet:   seedSet,
-		RunSeed:   0,
+		UserSeed:  userSeed,
 		Debug:     debug,
 		Tune:      tune,
 		Threshold: threshold,
 	}
 }
 
-func Parse() Config {
+func Parse() CLIConfig {
 	attempts := flag.Int("attempts", defaults.CLIAttemptsDefault, "max attempts per requested name before failing (default: 200)")
 	count := flag.Int("count", defaults.CLICountDefault, "number of words to generate (default: 10)")
 	length := flag.Int("length", defaults.CLILengthDefault, "length of generated word(s) (default: 5)")
@@ -42,13 +41,18 @@ func Parse() Config {
 	threshold := flag.Int("threshold", defaults.AcceptThreshold, "minimum score required for acceptance")
 	flag.Parse()
 
-	seedSet := false
+	userSeed := false
 	flag.Visit(func(f *flag.Flag) {
 		if f.Name == "seed" {
-			seedSet = true
+			userSeed = true
 		}
 	})
 
-	config := NewConfig(*attempts, *count, *length, *seed, seedSet, *debug, *tune, *threshold)
+	resolvedSeed := *seed
+	if !userSeed {
+		resolvedSeed = time.Now().UnixNano()
+	}
+
+	config := NewCLIConfig(*attempts, *count, *length, resolvedSeed, userSeed, *debug, *tune, *threshold)
 	return config
 }

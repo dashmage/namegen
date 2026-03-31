@@ -1,17 +1,20 @@
 package gen
 
+// ScoredWord stores an accepted generated word and its scoring metadata.
 type ScoredWord struct {
-	Word       string
-	Score      int
-	BigramProb string
+	Word            string
+	Score           int
+	ProbabilityBand ProbabilityBand
 }
 
+// RulePenalty describes a soft rule penalty applied during evaluation.
 type RulePenalty struct {
 	Name        string
 	Penalty     int
 	Description string
 }
 
+// RuleStat informs how often a rule was triggered in a run.
 type RuleStat struct {
 	Name        string
 	Hits        int
@@ -19,22 +22,25 @@ type RuleStat struct {
 	Description string
 }
 
+// GenStats tracks aggregate counters and rule-hit totals for a run.
 type GenStats struct {
 	Attempts        int
 	Accepted        int
 	HardRejects     int
 	LowScoreRejects int
 	Threshold       int
-	RuleHits        RuleCounters
+	RuleHits        RuleHits
 }
 
+// RunResult contains accepted words, run stats, and optional attempt details.
 type RunResult struct {
 	Words       []ScoredWord
 	Stats       GenStats
-	TuneEntries []TuneEntry
+	GenAttempts []GenAttempt
 }
 
-type TuneEntry struct {
+// GenAttempt records scoring and rejection context for one generation attempt.
+type GenAttempt struct {
 	Word             string
 	Score            int
 	Threshold        int
@@ -42,11 +48,12 @@ type TuneEntry struct {
 	RejectReason     string
 	HardRule         string
 	SoftRules        []RulePenalty
-	BigramProb       string
+	ProbabilityBand  ProbabilityBand
 	AvgLogProb       float64
 	BigramAdjustment int
 }
 
+// HardRuleStats returns the non-zero hard rules that were triggered during generation.
 func (s GenStats) HardRuleStats() []RuleStat {
 	stats := make([]RuleStat, 0, len(HardRules))
 	for _, rule := range HardRules {
@@ -63,6 +70,7 @@ func (s GenStats) HardRuleStats() []RuleStat {
 	return stats
 }
 
+// SoftRuleStats returns the non-zero soft rules that were triggered during generation.
 func (s GenStats) SoftRuleStats() []RuleStat {
 	stats := make([]RuleStat, 0, len(SoftRules))
 	for _, rule := range SoftRules {

@@ -14,13 +14,13 @@ var (
 	defaultModelErr  error
 )
 
-type RuleCounters struct {
+type RuleHits struct {
 	Hard map[string]int
 	Soft map[string]int
 }
 
-func NewRuleCounters() RuleCounters {
-	return RuleCounters{
+func NewRuleHits() RuleHits {
+	return RuleHits{
 		Hard: make(map[string]int),
 		Soft: make(map[string]int),
 	}
@@ -31,7 +31,7 @@ type Evaluation struct {
 	HardReject       bool
 	HardRule         string
 	SoftRules        []RulePenalty
-	ProbBand         probabilityBand
+	ProbabilityBand  ProbabilityBand
 	BigramAdjustment int
 	AvgLogProb       float64
 }
@@ -54,17 +54,17 @@ func loadDefaultModel() (*BigramModel, error) {
 }
 
 // Evaluate scores a candidate word and records any rule hits.
-func Evaluate(word string, counters *RuleCounters, captureDetails bool) Evaluation {
+func Evaluate(word string, hits *RuleHits, captureAttemptDetails bool) Evaluation {
 	evaluation := Evaluation{
-		Score:      defaults.BaseScore,
-		ProbBand:   probBandUnknown,
-		AvgLogProb: math.NaN(),
+		Score:           defaults.BaseScore,
+		ProbabilityBand: probBandUnknown,
+		AvgLogProb:      math.NaN(),
 	}
 
 	for _, r := range HardRules {
 		if r.Check(word) {
-			if counters != nil {
-				counters.Hard[r.Name]++
+			if hits != nil {
+				hits.Hard[r.Name]++
 			}
 			evaluation.Score = 0
 			evaluation.HardReject = true
@@ -75,10 +75,10 @@ func Evaluate(word string, counters *RuleCounters, captureDetails bool) Evaluati
 	for _, r := range SoftRules {
 		if r.Check(word) {
 			evaluation.Score -= r.Penalty
-			if counters != nil {
-				counters.Soft[r.Name]++
+			if hits != nil {
+				hits.Soft[r.Name]++
 			}
-			if captureDetails {
+			if captureAttemptDetails {
 				evaluation.SoftRules = append(evaluation.SoftRules, RulePenalty{
 					Name:        r.Name,
 					Penalty:     r.Penalty,
@@ -91,7 +91,7 @@ func Evaluate(word string, counters *RuleCounters, captureDetails bool) Evaluati
 	model, err := loadDefaultModel()
 	var adjustment int
 	if err == nil && model != nil {
-		adjustment, evaluation.ProbBand, evaluation.AvgLogProb = model.ScoreAdjustment(word)
+		adjustment, evaluation.ProbabilityBand, evaluation.AvgLogProb = model.ScoreAdjustment(word)
 		evaluation.BigramAdjustment = adjustment
 		evaluation.Score += adjustment
 	}

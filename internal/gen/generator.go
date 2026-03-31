@@ -8,7 +8,7 @@ import (
 	"github.com/dashmage/namegen/internal/defaults"
 )
 
-type Config struct {
+type GenConfig struct {
 	Attempts  int
 	Count     int
 	Length    int
@@ -28,14 +28,9 @@ var rhythmTemplates = []struct {
 
 var rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 
+// SetSeed sets the generator RNG to a deterministic seed.
 func SetSeed(seed int64) {
 	rng.Seed(seed)
-}
-
-func SeedWithTime() int64 {
-	seed := time.Now().UnixNano()
-	rng.Seed(seed)
-	return seed
 }
 
 // RandomWord generates a random word of provided length
@@ -59,16 +54,16 @@ func RandomWord(length int) string {
 }
 
 // Generate creates pronounceable candidate words and populates stats.
-func Generate(config Config) RunResult {
+func Generate(config GenConfig) RunResult {
 	result := RunResult{
 		Words: make([]ScoredWord, 0, config.Count),
 		Stats: GenStats{
 			Threshold: config.Threshold,
-			RuleHits:  NewRuleCounters(),
+			RuleHits:  NewRuleHits(),
 		},
 	}
 	if config.Tune {
-		result.TuneEntries = make([]TuneEntry, 0, config.Attempts)
+		result.GenAttempts = make([]GenAttempt, 0, config.Attempts)
 	}
 
 	for result.Stats.Accepted < config.Count {
@@ -80,13 +75,13 @@ func Generate(config Config) RunResult {
 		evaluation := Evaluate(word, &result.Stats.RuleHits, config.Tune)
 		result.Stats.Attempts++
 
-		entry := TuneEntry{
+		entry := GenAttempt{
 			Word:             word,
 			Score:            evaluation.Score,
 			Threshold:        config.Threshold,
 			HardRule:         evaluation.HardRule,
 			SoftRules:        append([]RulePenalty(nil), evaluation.SoftRules...),
-			BigramProb:       string(evaluation.ProbBand),
+			ProbabilityBand:  evaluation.ProbabilityBand,
 			AvgLogProb:       evaluation.AvgLogProb,
 			BigramAdjustment: evaluation.BigramAdjustment,
 		}
@@ -95,7 +90,7 @@ func Generate(config Config) RunResult {
 			result.Stats.HardRejects++
 			entry.RejectReason = "hard_rule"
 			if config.Tune {
-				result.TuneEntries = append(result.TuneEntries, entry)
+				result.GenAttempts = append(result.GenAttempts, entry)
 			}
 			continue
 		}
@@ -104,31 +99,33 @@ func Generate(config Config) RunResult {
 			result.Stats.LowScoreRejects++
 			entry.RejectReason = "low_score"
 			if config.Tune {
-				result.TuneEntries = append(result.TuneEntries, entry)
+				result.GenAttempts = append(result.GenAttempts, entry)
 			}
 			continue
 		}
 
 		result.Words = append(result.Words, ScoredWord{
-			Word:       word,
-			Score:      evaluation.Score,
-			BigramProb: string(evaluation.ProbBand),
+			Word:            word,
+			Score:           evaluation.Score,
+			ProbabilityBand: evaluation.ProbabilityBand,
 		})
 		result.Stats.Accepted++
 		entry.Accepted = true
 		entry.RejectReason = "accepted"
 		if config.Tune {
-			result.TuneEntries = append(result.TuneEntries, entry)
+			result.GenAttempts = append(result.GenAttempts, entry)
 		}
 	}
 
 	return result
 }
 
-func checkVowel(randChar string) bool {
-	return strings.Contains(defaults.Vowels, randChar)
+// isVowel reports whether ch exists in the configured vowel set.
+func isVowel(ch byte) bool {
+	return strings.ContainsRune(defaults.Vowels, rune(ch))
 }
 
+// buildRhythmPattern assembles a weighted CV pattern to the requested length.
 func buildRhythmPattern(length int) string {
 	var pattern strings.Builder
 	pattern.Grow(length)
@@ -156,6 +153,7 @@ func buildRhythmPattern(length int) string {
 	return string(out)
 }
 
+// weightedTemplate chooses a rhythm template using configured weights.
 func weightedTemplate() string {
 	total := 0
 	for _, t := range rhythmTemplates {
@@ -171,14 +169,16 @@ func weightedTemplate() string {
 	return "CVC"
 }
 
+// randomConsonant returns a random consonant from the default pool.
 func randomConsonant() byte {
 	idx := rng.Intn(len(defaults.Consonants))
 	return defaults.Consonants[idx]
 }
 
+// randomVowel returns a weighted random vowel from an internal pool.
 func randomVowel() byte {
 	// De-emphasize 'y' as a vowel.
-	WeightedVowelPool := "aaaaeeeiioouuy"
-	idx := rng.Intn(len(WeightedVowelPool))
-	return WeightedVowelPool[idx]
+	weightedVowelPool := "aaaaeeeiioouuy"
+	idx := rng.Intn(len(weightedVowelPool))
+	return weightedVowelPool[idx]
 }

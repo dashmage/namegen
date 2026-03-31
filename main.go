@@ -7,19 +7,14 @@ import (
 
 func main() {
 	config := cli.Parse()
-	if config.SeedSet {
-		gen.SetSeed(config.Seed)
-		config.RunSeed = config.Seed
-	} else {
-		config.RunSeed = gen.SeedWithTime()
-	}
+	gen.SetSeed(config.Seed)
 
-	result := gen.Generate(gen.Config{
+	result := gen.Generate(gen.GenConfig{
 		Attempts:  config.Attempts,
 		Count:     config.Count,
 		Length:    config.Length,
 		Threshold: config.Threshold,
 		Tune:      config.Tune,
 	})
-	cli.PrintRunResult(result, config.Debug, config.Tune, config.RunSeed, config.SeedSet)
+	cli.PrintRunResult(result, config.Debug, config.Tune, config.Seed, config.UserSeed)
 }
