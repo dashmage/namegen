@@ -2,6 +2,8 @@ package cli
 
 import (
 	"flag"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/dashmage/namegen/internal/defaults"
@@ -54,5 +56,23 @@ func Parse() CLIConfig {
 	}
 
 	config := NewCLIConfig(*attempts, *count, *length, resolvedSeed, userSeed, *debug, *tune, *threshold)
+	if err := Validate(config); err != nil {
+		fmt.Fprintf(os.Stderr, "invalid flags: %v\n", err)
+		os.Exit(2)
+	}
 	return config
+}
+
+// Validate rejects CLI configurations that would produce invalid or misleading runs.
+func Validate(config CLIConfig) error {
+	if config.Attempts <= 0 {
+		return fmt.Errorf("attempts must be greater than 0")
+	}
+	if config.Count <= 0 {
+		return fmt.Errorf("count must be greater than 0")
+	}
+	if config.Length <= 0 {
+		return fmt.Errorf("length must be greater than 0")
+	}
+	return nil
 }

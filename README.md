@@ -50,7 +50,7 @@ jifat
 
 Here's all the possible flags (from `internal/cli/config.go`):
 
-- `--attempts` max random word generation attempts per requested word
+- `--attempts` max random word generation attempts
 - `--count` number of words to generate
 - `--length` generated word length
 - `--seed` optional RNG seed for reproducible output
@@ -60,7 +60,7 @@ Here's all the possible flags (from `internal/cli/config.go`):
 
 ## How does it work?
 
-At a high level, the CLI loops until it has produced the requested number of words:
+At a high level, the CLI loops until it has produced the requested number of words or exhausted `attempts` total tries:
 
 1. Build a candidate word with a weighted rhythm template (`CV`, `CVC`, `CVV`, `VC`)
 2. Apply hard rules (rules that reject the word immediately on failure)
@@ -108,16 +108,19 @@ Rules are separated by behavior:
 
 Hard rules
 
-- four consecutive consonants
+- three consecutive consonants
 - illegal ending characters
-- 3+ same consecutive vowels
+- missing a core vowel (`a/e/i/o/u`)
+- triple repeated letters
+- disallowed consonant adjacency
 
 Soft rules
 
-- forbidden letter pairs (`qx`, `jq`, `qj`, etc.)
+- uncommon or awkward sequences (`qx`, `jq`, `qj`, etc.)
 - `q` not followed by `u`
-- repeated rare doubles (`jj`, `vv`, `qq`, `xx`, `zz`)
-- uncommon sequences
+- too many rare letters (`j`, `q`, `x`, `z`)
+- repeated identical vowel pairs
+- doubled consonant endings
 
 ## Bigram model
 

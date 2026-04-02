@@ -162,6 +162,9 @@ func ThreeConsecutiveConsonants(word string) bool {
 
 // IllegalEnding returns true if a word ends with impossible letters
 func IllegalEnding(word string) bool {
+	if len(word) == 0 {
+		return false
+	}
 	return strings.Contains(defaults.IllegalEndingChars, string(word[len(word)-1]))
 }
 

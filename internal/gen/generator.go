@@ -65,6 +65,9 @@ func Generate(config GenConfig) RunResult {
 	if config.Tune {
 		result.GenAttempts = make([]GenAttempt, 0, config.Attempts)
 	}
+	if config.Count <= 0 || config.Attempts <= 0 || config.Length <= 0 {
+		return result
+	}
 
 	for result.Stats.Accepted < config.Count {
 		if result.Stats.Attempts >= config.Attempts {
