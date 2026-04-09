@@ -33,8 +33,8 @@ func SetSeed(seed int64) {
 	rng.Seed(seed)
 }
 
-// RandomWord generates a random word of provided length
-func RandomWord(length int) string {
+// RandomName generates a random name of provided length.
+func RandomName(length int) string {
 	if length <= 0 {
 		return ""
 	}
@@ -53,10 +53,10 @@ func RandomWord(length int) string {
 	return res.String()
 }
 
-// Generate creates pronounceable candidate words and populates stats.
+// Generate creates pronounceable name candidates and populates stats.
 func Generate(config GenConfig) RunResult {
 	result := RunResult{
-		Words: make([]ScoredWord, 0, config.Count),
+		Names: make([]ScoredName, 0, config.Count),
 		Stats: GenStats{
 			Threshold: config.Threshold,
 			RuleHits:  NewRuleHits(),
@@ -74,12 +74,12 @@ func Generate(config GenConfig) RunResult {
 			break
 		}
 
-		word := RandomWord(config.Length)
-		evaluation := Evaluate(word, &result.Stats.RuleHits, config.Tune)
+		candidate := RandomName(config.Length)
+		evaluation := Evaluate(candidate, &result.Stats.RuleHits, config.Tune)
 		result.Stats.Attempts++
 
 		entry := GenAttempt{
-			Word:             word,
+			Candidate:        candidate,
 			Score:            evaluation.Score,
 			Threshold:        config.Threshold,
 			HardRule:         evaluation.HardRule,
@@ -107,8 +107,8 @@ func Generate(config GenConfig) RunResult {
 			continue
 		}
 
-		result.Words = append(result.Words, ScoredWord{
-			Word:            word,
+		result.Names = append(result.Names, ScoredName{
+			Name:            candidate,
 			Score:           evaluation.Score,
 			ProbabilityBand: evaluation.ProbabilityBand,
 		})

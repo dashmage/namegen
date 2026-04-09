@@ -1,8 +1,8 @@
 package gen
 
-// ScoredWord stores an accepted generated word and its scoring metadata.
-type ScoredWord struct {
-	Word            string
+// ScoredName stores an accepted generated name and its scoring metadata.
+type ScoredName struct {
+	Name            string
 	Score           int
 	ProbabilityBand ProbabilityBand
 }
@@ -32,16 +32,16 @@ type GenStats struct {
 	RuleHits        RuleHits
 }
 
-// RunResult contains accepted words, run stats, and optional attempt details.
+// RunResult contains accepted names, run stats, and optional candidate details.
 type RunResult struct {
-	Words       []ScoredWord
+	Names       []ScoredName
 	Stats       GenStats
 	GenAttempts []GenAttempt
 }
 
-// GenAttempt records scoring and rejection context for one generation attempt.
+// GenAttempt records scoring and rejection context for one candidate.
 type GenAttempt struct {
-	Word             string
+	Candidate        string
 	Score            int
 	Threshold        int
 	Accepted         bool

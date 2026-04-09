@@ -13,7 +13,7 @@ import (
 )
 
 type tuneObservation struct {
-	Word       string
+	Name       string
 	Rating     int
 	Evaluation gen.Evaluation
 }
@@ -38,7 +38,7 @@ type bandSignal struct {
 const (
 	tuneSignalsFormat         = "Signals: hard_rule=%s soft_rules=%s probability_band=%s\n"
 	tuneSuggestionsHeader     = "Manual tuning suggestions after %d rating(s)\n"
-	tuneNoStrongSignalMessage = "- No strong signal yet. Keep rating more words."
+	tuneNoStrongSignalMessage = "- No strong signal yet. Keep rating more names."
 
 	tunePenaltyTooHighFormat = "%s penalty may be too high; consider lowering from %d to %d"
 	tunePenaltyTooLowFormat  = "%s penalty may be too low; consider raising from %d to %d"
@@ -50,7 +50,7 @@ const (
 	tuneMidHarshFormat       = "mid probability scoring looks too harsh; consider lowering MidProbCutoff from %.1f to %.1f or lowering MidProbPenalty from %d to %d"
 	tuneMidLenientFormat     = "mid probability scoring may be too lenient; consider raising MidProbCutoff from %.1f to %.1f or raising MidProbPenalty from %d to %d"
 	tuneGoodAlignedFormat    = "good probability bonus lines up with your ratings so far; keep GoodProbBonus at %d unless later feedback shifts"
-	tuneGoodWeakFormat       = "good probability words are landing weakly; consider lowering GoodProbBonus from %d to %d or raising MidProbCutoff from %.1f to %.1f"
+	tuneGoodWeakFormat       = "good probability names are landing weakly; consider lowering GoodProbBonus from %d to %d or raising MidProbCutoff from %.1f to %.1f"
 )
 
 // RunTuneSession starts the interactive tuning loop.
@@ -59,15 +59,15 @@ func RunTuneSession(length int) {
 	observations := make([]tuneObservation, 0, 16)
 
 	fmt.Println("Tune mode")
-	fmt.Println("Rate each generated word from 1-5, or press q to quit.")
+	fmt.Println("Rate each generated name from 1-5, or press q to quit.")
 	fmt.Println("1=very bad 2=bad 3=ok 4=good 5=very good")
 
 	for {
-		word := gen.RandomWord(length)
-		evaluation := gen.Evaluate(word, nil, true)
+		name := gen.RandomName(length)
+		evaluation := gen.Evaluate(name, nil, true)
 
 		fmt.Println()
-		fmt.Printf("Word: %s\n", word)
+		fmt.Printf("Name: %s\n", name)
 
 		rating, quit, err := readTuneRating(reader)
 		if err != nil {
@@ -84,12 +84,12 @@ func RunTuneSession(length int) {
 		}
 
 		observations = append(observations, tuneObservation{
-			Word:       word,
+			Name:       name,
 			Rating:     rating,
 			Evaluation: evaluation,
 		})
 
-		printTuneFeedback(word, rating, evaluation, observations)
+		printTuneFeedback(name, rating, evaluation, observations)
 	}
 }
 
@@ -115,8 +115,8 @@ func readTuneRating(reader *bufio.Reader) (rating int, quit bool, err error) {
 	}
 }
 
-func printTuneFeedback(word string, rating int, evaluation gen.Evaluation, observations []tuneObservation) {
-	fmt.Printf("Recorded %q as %s.\n", word, tuneLabel(rating))
+func printTuneFeedback(name string, rating int, evaluation gen.Evaluation, observations []tuneObservation) {
+	fmt.Printf("Recorded %q as %s.\n", name, tuneLabel(rating))
 	fmt.Printf(tuneSignalsFormat, formatHardRule(evaluation.HardRule), formatSoftRules(evaluation.SoftRules), evaluation.ProbabilityBand.Name)
 	printTuneRecommendations(observations)
 }

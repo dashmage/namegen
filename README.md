@@ -6,7 +6,7 @@ I've always wanted to have a way to reliably generate plausible sounding names f
 
 The current implementation uses three layers:
 
-1. Template-based random word construction (using a vowel/consonant rhythm)
+1. Template-based random name construction (using a vowel/consonant rhythm)
 2. Rule-based filtering and penalties
 3. Corpus-trained bigram scoring
 
@@ -50,23 +50,24 @@ jifat
 
 Here's all the possible flags (see [internal/cli/config.go](./internal/cli/config.go)):
 
-- `--attempts` max random word generation attempts
-- `--count` number of words to generate
-- `--length` generated word length
+- `--attempts` max random name generation attempts
+- `--count` number of names to generate
+- `--length` generated name length
 - `--seed` optional RNG seed for reproducible output
 - `--threshold` minimum acceptance score
 - `--debug` print scores and generation diagnostics
-- `--tune` start an interactive tuning session: rate each generated word from `1-5`, and `namegen` provides penalty/cutoff suggestions
+- `--tune` start an interactive tuning session: rate each generated name from `1-5`, and `namegen` provides penalty/cutoff suggestions
 
 ## How does it work?
 
-At a high level, the CLI loops until it has produced the requested number of words or exhausted `attempts` total tries:
+At a high level, the CLI loops until it has produced the requested number of names or exhausted `attempts` total tries:
 
-1. Build a candidate word with a weighted rhythm template (`CV`, `CVC`, `CVV`, `VC`)
-2. Apply hard rules (rules that reject the word immediately on failure)
-3. Apply soft rules (rules that subtract penalties)
-4. Apply a bigram score adjustment from the trained model
-5. Accept the candidate if final score is above threshold
+1. Build a randomly generated candidate name with a weighted rhythm template (`CV`, `CVC`, `CVV`, `VC`)
+2. Set a baseline score and threshold for an acceptable name.
+3. Apply hard rules (rules that reject the candidate immediately on failure)
+4. Apply soft rules (rules that subtract penalties from the score)
+5. Apply a score adjustment using a bigram probability model trained on existing names
+6. Accept the candidate if final score is above threshold
 
 The core flow is implemented in:
 
@@ -75,9 +76,9 @@ The core flow is implemented in:
 - `internal/gen/score.go`
 - `internal/gen/model.go`
 
-## Template-based random word generation
+## Template-based random name generation
 
-Instead of drawing each letter uniformly from `a-z`, candidates are built from vowel/consonant patterns to create more natural rhythm.
+Instead of drawing each letter uniformly from `a-z`, name candidates are built from vowel/consonant patterns to create more natural rhythm.
 
 - `C` = consonant
 - `V` = vowel
@@ -104,7 +105,7 @@ This structure dramatically improves pronounceability compared to fully uniform 
 Rules are separated by behavior:
 
 - Hard rules: immediate reject
-- Soft rules: keep candidate, subtract score
+- Soft rules: keep the candidate, subtract score
 
 Hard rules
 
@@ -183,7 +184,7 @@ Corpus words:
 
 - `lena`, `lora`, `nora`, `mila`, `mira`, `sora`
 
-Candidate:
+Candidate name:
 
 - `lora`
 
@@ -225,4 +226,4 @@ Scoring flow example:
 2. no soft penalties triggered
 3. probability band for `-1.719` gives a small bonus
 4. final score stays above acceptance threshold
-5. candidate accepted
+5. candidate accepted as a name

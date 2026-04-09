@@ -53,8 +53,8 @@ func loadDefaultModel() (*BigramModel, error) {
 	return defaultModel, defaultModelErr
 }
 
-// Evaluate scores a candidate word and records any rule hits.
-func Evaluate(word string, hits *RuleHits, captureAttemptDetails bool) Evaluation {
+// Evaluate scores a candidate name and records any rule hits.
+func Evaluate(name string, hits *RuleHits, captureAttemptDetails bool) Evaluation {
 	evaluation := Evaluation{
 		Score:           defaults.BaseScore,
 		ProbabilityBand: probBandUnknown,
@@ -62,7 +62,7 @@ func Evaluate(word string, hits *RuleHits, captureAttemptDetails bool) Evaluatio
 	}
 
 	for _, r := range HardRules {
-		if r.Check(word) {
+		if r.Check(name) {
 			if hits != nil {
 				hits.Hard[r.Name]++
 			}
@@ -73,7 +73,7 @@ func Evaluate(word string, hits *RuleHits, captureAttemptDetails bool) Evaluatio
 		}
 	}
 	for _, r := range SoftRules {
-		if r.Check(word) {
+		if r.Check(name) {
 			evaluation.Score -= r.Penalty
 			if hits != nil {
 				hits.Soft[r.Name]++
@@ -90,7 +90,7 @@ func Evaluate(word string, hits *RuleHits, captureAttemptDetails bool) Evaluatio
 
 	model, err := loadDefaultModel()
 	if err == nil && model != nil {
-		evaluation.ProbabilityBand, evaluation.AvgLogProb = model.ScoreAdjustment(word)
+		evaluation.ProbabilityBand, evaluation.AvgLogProb = model.ScoreAdjustment(name)
 		evaluation.BigramAdjustment = evaluation.ProbabilityBand.Value
 		evaluation.Score += evaluation.BigramAdjustment
 	}

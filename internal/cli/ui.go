@@ -8,20 +8,20 @@ import (
 	"github.com/dashmage/namegen/internal/gen"
 )
 
-// PrintAcceptedWord prints an accepted candidate in concise or verbose form.
-func PrintAcceptedWord(candidate gen.ScoredWord, verbose bool) {
+// PrintAcceptedName prints an accepted name in concise or verbose form.
+func PrintAcceptedName(name gen.ScoredName, verbose bool) {
 	if verbose {
-		fmt.Printf("%s (score=%d, probability_band=%s)\n", candidate.Word, candidate.Score, candidate.ProbabilityBand.Name)
+		fmt.Printf("%s (score=%d, probability_band=%s)\n", name.Name, name.Score, name.ProbabilityBand.Name)
 		return
 	}
-	fmt.Println(candidate.Word)
+	fmt.Println(name.Name)
 }
 
-// PrintRunResult prints accepted words and optional debug or tuning output.
+// PrintRunResult prints accepted names and optional debug or tuning output.
 func PrintRunResult(result gen.RunResult, debug, tune bool, seed int64, userSeed bool) {
 	verbose := debug || tune
-	for _, candidate := range result.Words {
-		PrintAcceptedWord(candidate, verbose)
+	for _, name := range result.Names {
+		PrintAcceptedName(name, verbose)
 	}
 
 	if tune {
@@ -41,7 +41,7 @@ func PrintTuneReport(result gen.RunResult, seed int64, userSeed bool) {
 	PrintDebugSummary(result.Stats, seed, userSeed)
 
 	fmt.Println()
-	fmt.Println("Generation attempts (all attempts)")
+	fmt.Println("Candidate attempts (all attempts)")
 	if len(result.GenAttempts) == 0 {
 		fmt.Println("- none")
 		return
@@ -56,8 +56,8 @@ func PrintTuneReport(result gen.RunResult, seed int64, userSeed bool) {
 			}
 		}
 
-		fmt.Printf("\n- #%d: %s\n", i+1, strings.ToUpper(entry.Word))
-		fmt.Printf("  word=%s score=%d threshold=%d decision=%s\n", entry.Word, entry.Score, entry.Threshold, decision)
+		fmt.Printf("\n- #%d: %s\n", i+1, strings.ToUpper(entry.Candidate))
+		fmt.Printf("  candidate=%s score=%d threshold=%d decision=%s\n", entry.Candidate, entry.Score, entry.Threshold, decision)
 		fmt.Printf("  soft_rules=%s\n", formatSoftRules(entry.SoftRules))
 		if math.IsNaN(entry.AvgLogProb) {
 			fmt.Printf("  bigram_probability=unavailable band=%s adjustment=%d\n", entry.ProbabilityBand.Name, entry.BigramAdjustment)
@@ -85,7 +85,7 @@ func formatSoftRules(rules []gen.RulePenalty) string {
 func PrintDebugSummary(summary gen.GenStats, seed int64, userSeed bool) {
 	printHeader("\nDebug summary")
 	fmt.Printf("- attempts: %d\n", summary.Attempts)
-	fmt.Printf("- accepted: %d\n", summary.Accepted)
+	fmt.Printf("- accepted names: %d\n", summary.Accepted)
 	fmt.Printf("- hard rejects: %d\n", summary.HardRejects)
 	fmt.Printf("- low-score rejects: %d\n", summary.LowScoreRejects)
 	fmt.Printf("- threshold: %d\n", summary.Threshold)
