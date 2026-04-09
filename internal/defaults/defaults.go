@@ -1,11 +1,11 @@
 package defaults
 
 const (
-	AcceptThreshold = 80
+	Threshold = 80
 
-	CLIAttemptsDefault = 200
-	CLICountDefault    = 10
-	CLILengthDefault   = 5
+	MaxAttempts = 200
+	Count       = 10
+	Length      = 5
 
 	BaseScore = 100
 	BaseAlpha = 0.5

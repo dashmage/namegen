@@ -1,67 +1,48 @@
 package gen
 
-// ScoredName stores an accepted generated name and its scoring metadata.
-type ScoredName struct {
+// AcceptedName stores an accepted generated name and its scoring metadata.
+type AcceptedName struct {
 	Name            string
 	Score           int
 	ProbabilityBand ProbabilityBand
 }
 
-// RulePenalty describes a soft rule penalty applied during evaluation.
-type RulePenalty struct {
-	Name        string
-	Penalty     int
-	Description string
-}
-
-// RuleStat informs how often a rule was triggered in a run.
-type RuleStat struct {
-	Name        string
-	Hits        int
-	Penalty     int
-	Description string
-}
-
-// GenStats tracks aggregate counters and rule-hit totals for a run.
-type GenStats struct {
+// Result contains accepted names, aggregate counters, and optional candidate details.
+type Result struct {
+	Names           []AcceptedName
+	AttemptLog      []Attempt
 	Attempts        int
-	Accepted        int
 	HardRejects     int
 	LowScoreRejects int
 	Threshold       int
 	RuleHits        RuleHits
 }
 
-// RunResult contains accepted names, run stats, and optional candidate details.
-type RunResult struct {
-	Names       []ScoredName
-	Stats       GenStats
-	GenAttempts []GenAttempt
-}
-
-// GenAttempt records scoring and rejection context for one candidate.
-type GenAttempt struct {
+// Attempt records scoring and rejection context for one candidate.
+type Attempt struct {
 	Candidate        string
 	Score            int
 	Threshold        int
 	Accepted         bool
 	RejectReason     string
 	HardRule         string
-	SoftRules        []RulePenalty
+	SoftRules        []Rule
 	ProbabilityBand  ProbabilityBand
 	AvgLogProb       float64
 	BigramAdjustment int
 }
 
 // HardRuleStats returns the non-zero hard rules that were triggered during generation.
-func (s GenStats) HardRuleStats() []RuleStat {
-	stats := make([]RuleStat, 0, len(HardRules))
+
+func (r Result) HardRuleStats() []Rule {
+	stats := make([]Rule, 0, len(HardRules))
 	for _, rule := range HardRules {
-		hits := s.RuleHits.Hard[rule.Name]
+		hits := r.RuleHits.Hard[rule.Name]
 		if hits == 0 {
 			continue
 		}
-		stats = append(stats, RuleStat{
+		stats = append(stats, Rule{
+			Type:        rule.Type,
 			Name:        rule.Name,
 			Hits:        hits,
 			Description: rule.Description,
@@ -71,14 +52,16 @@ func (s GenStats) HardRuleStats() []RuleStat {
 }
 
 // SoftRuleStats returns the non-zero soft rules that were triggered during generation.
-func (s GenStats) SoftRuleStats() []RuleStat {
-	stats := make([]RuleStat, 0, len(SoftRules))
+
+func (r Result) SoftRuleStats() []Rule {
+	stats := make([]Rule, 0, len(SoftRules))
 	for _, rule := range SoftRules {
-		hits := s.RuleHits.Soft[rule.Name]
+		hits := r.RuleHits.Soft[rule.Name]
 		if hits == 0 {
 			continue
 		}
-		stats = append(stats, RuleStat{
+		stats = append(stats, Rule{
+			Type:        rule.Type,
 			Name:        rule.Name,
 			Hits:        hits,
 			Penalty:     rule.Penalty,

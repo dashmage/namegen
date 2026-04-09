@@ -8,12 +8,12 @@ import (
 	"github.com/dashmage/namegen/internal/defaults"
 )
 
-type GenConfig struct {
-	Attempts  int
-	Count     int
-	Length    int
-	Threshold int
-	Tune      bool
+type Options struct {
+	MaxAttempts int
+	Count       int
+	Length      int
+	Threshold   int
+	TuneEnabled bool
 }
 
 var rhythmTemplates = []struct {
@@ -53,70 +53,66 @@ func RandomName(length int) string {
 	return res.String()
 }
 
-// Generate creates pronounceable name candidates and populates stats.
-func Generate(config GenConfig) RunResult {
-	result := RunResult{
-		Names: make([]ScoredName, 0, config.Count),
-		Stats: GenStats{
-			Threshold: config.Threshold,
-			RuleHits:  NewRuleHits(),
-		},
+// Generate creates pronounceable name candidates and populates results.
+func Generate(opt Options) Result {
+	result := Result{
+		Names:     make([]AcceptedName, 0, opt.Count),
+		Threshold: opt.Threshold,
+		RuleHits:  NewRuleHits(),
 	}
-	if config.Tune {
-		result.GenAttempts = make([]GenAttempt, 0, config.Attempts)
+	if opt.TuneEnabled {
+		result.AttemptLog = make([]Attempt, 0, opt.MaxAttempts)
 	}
-	if config.Count <= 0 || config.Attempts <= 0 || config.Length <= 0 {
+	if opt.Count <= 0 || opt.MaxAttempts <= 0 || opt.Length <= 0 {
 		return result
 	}
 
-	for result.Stats.Accepted < config.Count {
-		if result.Stats.Attempts >= config.Attempts {
+	for len(result.Names) < opt.Count {
+		if result.Attempts >= opt.MaxAttempts {
 			break
 		}
 
-		candidate := RandomName(config.Length)
-		evaluation := Evaluate(candidate, &result.Stats.RuleHits, config.Tune)
-		result.Stats.Attempts++
+		candidate := RandomName(opt.Length)
+		evaluation := Evaluate(candidate, &result.RuleHits, opt.TuneEnabled)
+		result.Attempts++
 
-		entry := GenAttempt{
+		entry := Attempt{
 			Candidate:        candidate,
 			Score:            evaluation.Score,
-			Threshold:        config.Threshold,
+			Threshold:        opt.Threshold,
 			HardRule:         evaluation.HardRule,
-			SoftRules:        append([]RulePenalty(nil), evaluation.SoftRules...),
+			SoftRules:        append([]Rule(nil), evaluation.SoftRules...),
 			ProbabilityBand:  evaluation.ProbabilityBand,
 			AvgLogProb:       evaluation.AvgLogProb,
 			BigramAdjustment: evaluation.BigramAdjustment,
 		}
 
 		if evaluation.HardReject {
-			result.Stats.HardRejects++
+			result.HardRejects++
 			entry.RejectReason = "hard_rule"
-			if config.Tune {
-				result.GenAttempts = append(result.GenAttempts, entry)
+			if opt.TuneEnabled {
+				result.AttemptLog = append(result.AttemptLog, entry)
 			}
 			continue
 		}
 
-		if evaluation.Score <= config.Threshold {
-			result.Stats.LowScoreRejects++
+		if evaluation.Score <= opt.Threshold {
+			result.LowScoreRejects++
 			entry.RejectReason = "low_score"
-			if config.Tune {
-				result.GenAttempts = append(result.GenAttempts, entry)
+			if opt.TuneEnabled {
+				result.AttemptLog = append(result.AttemptLog, entry)
 			}
 			continue
 		}
 
-		result.Names = append(result.Names, ScoredName{
+		result.Names = append(result.Names, AcceptedName{
 			Name:            candidate,
 			Score:           evaluation.Score,
 			ProbabilityBand: evaluation.ProbabilityBand,
 		})
-		result.Stats.Accepted++
 		entry.Accepted = true
-		entry.RejectReason = "accepted"
-		if config.Tune {
-			result.GenAttempts = append(result.GenAttempts, entry)
+		if opt.TuneEnabled {
+			result.AttemptLog = append(result.AttemptLog, entry)
 		}
 	}
 

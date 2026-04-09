@@ -5,27 +5,27 @@ import "testing"
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name    string
-		config  CLIConfig
+		config  Config
 		wantErr bool
 	}{
 		{
 			name:    "valid",
-			config:  NewCLIConfig(10, 5, 6, 1, false, false, false, 80),
+			config:  NewConfig(10, 5, 6, 1, false, false, false, 80),
 			wantErr: false,
 		},
 		{
 			name:    "rejects non positive attempts",
-			config:  NewCLIConfig(0, 5, 6, 1, false, false, false, 80),
+			config:  NewConfig(0, 5, 6, 1, false, false, false, 80),
 			wantErr: true,
 		},
 		{
 			name:    "rejects non positive count",
-			config:  NewCLIConfig(10, 0, 6, 1, false, false, false, 80),
+			config:  NewConfig(10, 0, 6, 1, false, false, false, 80),
 			wantErr: true,
 		},
 		{
 			name:    "rejects non positive length",
-			config:  NewCLIConfig(10, 5, 0, 1, false, false, false, 80),
+			config:  NewConfig(10, 5, 0, 1, false, false, false, 80),
 			wantErr: true,
 		},
 	}

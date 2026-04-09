@@ -30,7 +30,7 @@ type Evaluation struct {
 	Score            int
 	HardReject       bool
 	HardRule         string
-	SoftRules        []RulePenalty
+	SoftRules        []Rule
 	ProbabilityBand  ProbabilityBand
 	BigramAdjustment int
 	AvgLogProb       float64
@@ -79,7 +79,7 @@ func Evaluate(name string, hits *RuleHits, captureAttemptDetails bool) Evaluatio
 				hits.Soft[r.Name]++
 			}
 			if captureAttemptDetails {
-				evaluation.SoftRules = append(evaluation.SoftRules, RulePenalty{
+				evaluation.SoftRules = append(evaluation.SoftRules, Rule{
 					Name:        r.Name,
 					Penalty:     r.Penalty,
 					Description: r.Description,

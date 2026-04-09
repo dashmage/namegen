@@ -6,6 +6,93 @@ import (
 	"github.com/dashmage/namegen/internal/defaults"
 )
 
+type RuleType uint8
+
+const (
+	HardRule RuleType = iota
+	SoftRule
+)
+
+type Rule struct {
+	Type        RuleType
+	Name        string
+	Description string
+	Penalty     int
+	Hits        int
+	Check       func(string) bool
+}
+
+var HardRules = []Rule{
+	{
+		Type:        HardRule,
+		Name:        "three_consecutive_consonants",
+		Description: "Rejects words with hard-to-pronounce 3-consonant runs.",
+		Check:       ThreeConsecutiveConsonants,
+	},
+	{
+		Type:        HardRule,
+		Name:        "illegal_ending",
+		Description: "Rejects words ending in awkward letters.",
+		Check:       IllegalEnding,
+	},
+	{
+		Type:        HardRule,
+		Name:        "missing_core_vowel",
+		Description: "Rejects words without any core vowel (a/e/i/o/u).",
+		Check:       MissingCoreVowel,
+	},
+	{
+		Type:        HardRule,
+		Name:        "triple_same_letter",
+		Description: "Rejects any triple repeated letter sequence.",
+		Check:       TripleSameLetter,
+	},
+	{
+		Type:        HardRule,
+		Name:        "illegal_consonant_adjacency",
+		Description: "Rejects disallowed consonant-to-consonant transitions.",
+		Check:       IllegalConsonantAdjacency,
+	},
+}
+
+var SoftRules = []Rule{
+	{
+		Type:        SoftRule,
+		Name:        "uncommon_sequence",
+		Description: "Penalizes impossible or very awkward letter pairs.",
+		Penalty:     25,
+		Check:       UncommonSequence,
+	},
+	{
+		Type:        SoftRule,
+		Name:        "q_not_followed_by_u",
+		Description: "Penalizes q when it is not followed by u.",
+		Penalty:     10,
+		Check:       QWithoutU,
+	},
+	{
+		Type:        SoftRule,
+		Name:        "rare_letter_density",
+		Description: "Penalizes words with too many rare letters (j/q/x/z).",
+		Penalty:     20,
+		Check:       RareLetterDensity,
+	},
+	{
+		Type:        SoftRule,
+		Name:        "repeated_same_vowel_pair",
+		Description: "Penalizes doubled identical vowels that often sound awkward.",
+		Penalty:     5,
+		Check:       RepeatedSameVowelPair,
+	},
+	{
+		Type:        SoftRule,
+		Name:        "double_consonant_ending",
+		Description: "Penalizes words ending in doubled consonants.",
+		Penalty:     10,
+		Check:       DoubleConsonantEnding,
+	},
+}
+
 var (
 	// Keep only non-consonant-adjacency pairs here.
 	// Consonant-consonant restrictions are handled by IllegalConsonantAdjacency.
@@ -74,74 +161,6 @@ func buildAllowedPrevConsonants(next map[byte]string) map[byte]string {
 	}
 
 	return prev
-}
-
-type Rule struct {
-	Name        string
-	Description string
-	Penalty     int
-	Check       func(string) bool
-}
-
-var HardRules = []Rule{
-	{
-		Name:        "three_consecutive_consonants",
-		Description: "Rejects words with hard-to-pronounce 3-consonant runs.",
-		Check:       ThreeConsecutiveConsonants,
-	},
-	{
-		Name:        "illegal_ending",
-		Description: "Rejects words ending in awkward letters.",
-		Check:       IllegalEnding,
-	},
-	{
-		Name:        "missing_core_vowel",
-		Description: "Rejects words without any core vowel (a/e/i/o/u).",
-		Check:       MissingCoreVowel,
-	},
-	{
-		Name:        "triple_same_letter",
-		Description: "Rejects any triple repeated letter sequence.",
-		Check:       TripleSameLetter,
-	},
-	{
-		Name:        "illegal_consonant_adjacency",
-		Description: "Rejects disallowed consonant-to-consonant transitions.",
-		Check:       IllegalConsonantAdjacency,
-	},
-}
-
-var SoftRules = []Rule{
-	{
-		Name:        "uncommon_sequence",
-		Description: "Penalizes impossible or very awkward letter pairs.",
-		Penalty:     25,
-		Check:       UncommonSequence,
-	},
-	{
-		Name:        "q_not_followed_by_u",
-		Description: "Penalizes q when it is not followed by u.",
-		Penalty:     10,
-		Check:       QWithoutU,
-	},
-	{
-		Name:        "rare_letter_density",
-		Description: "Penalizes words with too many rare letters (j/q/x/z).",
-		Penalty:     20,
-		Check:       RareLetterDensity,
-	},
-	{
-		Name:        "repeated_same_vowel_pair",
-		Description: "Penalizes doubled identical vowels that often sound awkward.",
-		Penalty:     5,
-		Check:       RepeatedSameVowelPair,
-	},
-	{
-		Name:        "double_consonant_ending",
-		Description: "Penalizes words ending in doubled consonants.",
-		Penalty:     10,
-		Check:       DoubleConsonantEnding,
-	},
 }
 
 // ThreeConsecutiveConsonants returns true if 3 or more consecutive consonants are present.

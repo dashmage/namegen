@@ -8,17 +8,17 @@ import (
 func main() {
 	config := cli.Parse()
 	gen.SetSeed(config.Seed)
-	if config.Tune {
+	if config.TuneEnabled {
 		cli.RunTuneSession(config.Length)
 		return
 	}
 
-	result := gen.Generate(gen.GenConfig{
-		Attempts:  config.Attempts,
-		Count:     config.Count,
-		Length:    config.Length,
-		Threshold: config.Threshold,
-		Tune:      config.Tune,
+	result := gen.Generate(gen.Options{
+		MaxAttempts: config.MaxAttempts,
+		Count:       config.Count,
+		Length:      config.Length,
+		Threshold:   config.Threshold,
+		TuneEnabled: config.TuneEnabled,
 	})
-	cli.PrintRunResult(result, config.Debug, config.Tune, config.Seed, config.UserSeed)
+	cli.PrintResult(result, config.DebugEnabled, config.TuneEnabled, config.Seed, config.UserSeed)
 }
