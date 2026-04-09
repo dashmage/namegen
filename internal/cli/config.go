@@ -39,7 +39,7 @@ func Parse() CLIConfig {
 	length := flag.Int("length", defaults.CLILengthDefault, "length of generated word(s) (default: 5)")
 	seed := flag.Int64("seed", 0, "RNG seed for reproducible output (optional)")
 	debug := flag.Bool("debug", false, "print scores and generation diagnostics")
-	tune := flag.Bool("tune", false, "print per-attempt score breakdown for tuning")
+	tune := flag.Bool("tune", false, "interactive tuning mode")
 	threshold := flag.Int("threshold", defaults.AcceptThreshold, "minimum score required for acceptance")
 	flag.Parse()
 

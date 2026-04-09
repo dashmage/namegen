@@ -27,7 +27,7 @@ var (
 		'v': "lrv",
 		'w': "r",
 		'x': "pst",
-		'z': "lr",
+		'z': "jklr",
 	}
 	AllowedPrevConsonants = buildAllowedPrevConsonants(AllowedNextConsonants)
 )
@@ -133,7 +133,7 @@ var SoftRules = []Rule{
 	{
 		Name:        "repeated_same_vowel_pair",
 		Description: "Penalizes doubled identical vowels that often sound awkward.",
-		Penalty:     10,
+		Penalty:     5,
 		Check:       RepeatedSameVowelPair,
 	},
 	{

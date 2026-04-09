@@ -48,7 +48,7 @@ keipy
 jifat
 ```
 
-Here's all the possible flags (from `internal/cli/config.go`):
+Here's all the possible flags (see [internal/cli/config.go](./internal/cli/config.go)):
 
 - `--attempts` max random word generation attempts
 - `--count` number of words to generate
@@ -56,7 +56,7 @@ Here's all the possible flags (from `internal/cli/config.go`):
 - `--seed` optional RNG seed for reproducible output
 - `--threshold` minimum acceptance score
 - `--debug` print scores and generation diagnostics
-- `--tune` print stats for all randomly generated words for tuning values
+- `--tune` start an interactive tuning session: rate each generated word from `1-5`, and `namegen` provides penalty/cutoff suggestions
 
 ## How does it work?
 

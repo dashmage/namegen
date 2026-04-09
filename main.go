@@ -8,6 +8,10 @@ import (
 func main() {
 	config := cli.Parse()
 	gen.SetSeed(config.Seed)
+	if config.Tune {
+		cli.RunTuneSession(config.Length)
+		return
+	}
 
 	result := gen.Generate(gen.GenConfig{
 		Attempts:  config.Attempts,
