@@ -83,7 +83,7 @@ func formatSoftRules(rules []gen.RulePenalty) string {
 
 // PrintDebugSummary prints aggregate generation counts and rule hit summaries.
 func PrintDebugSummary(summary gen.GenStats, seed int64, userSeed bool) {
-	fmt.Printf("\nDebug summary\n")
+	printHeader("\nDebug summary")
 	fmt.Printf("- attempts: %d\n", summary.Attempts)
 	fmt.Printf("- accepted: %d\n", summary.Accepted)
 	fmt.Printf("- hard rejects: %d\n", summary.HardRejects)
@@ -103,7 +103,7 @@ func PrintDebugSummary(summary gen.GenStats, seed int64, userSeed bool) {
 
 // printHardRuleHits prints hard-rule hit counts and descriptions.
 func printHardRuleHits(stats []gen.RuleStat) {
-	fmt.Println("Hard rule hits (instant rejection)")
+	printHeader("Hard rule hits (instant rejection)")
 	if len(stats) == 0 {
 		fmt.Println("- none")
 		return
@@ -116,7 +116,7 @@ func printHardRuleHits(stats []gen.RuleStat) {
 
 // printSoftRuleHits prints soft-rule hit counts, descriptions, and penalties.
 func printSoftRuleHits(stats []gen.RuleStat) {
-	fmt.Println("Soft rule hits (score penalized)")
+	printHeader("Soft rule hits (score penalized)")
 	if len(stats) == 0 {
 		fmt.Println("- none")
 		return
@@ -125,4 +125,10 @@ func printSoftRuleHits(stats []gen.RuleStat) {
 	for _, stat := range stats {
 		fmt.Printf("- %s x%d: %s (penalty=%d)\n", stat.Name, stat.Hits, stat.Description, stat.Penalty)
 	}
+}
+
+// printHeader prints a string as a distinguishable header
+func printHeader(header string) {
+	fmt.Println(header)
+	fmt.Println(strings.Repeat("=", len(header)))
 }
