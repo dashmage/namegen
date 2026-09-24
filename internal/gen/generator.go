@@ -126,14 +126,14 @@ func Generate(opt Options) Result {
 		result.Attempts++
 
 		entry := Attempt{
-			Candidate:        candidate,
-			Score:            evaluation.Score,
-			Threshold:        opt.Threshold,
-			HardRule:         evaluation.HardRule,
-			SoftRules:        append([]Rule(nil), evaluation.SoftRules...),
-			ProbabilityBand:  evaluation.ProbabilityBand,
-			AvgLogProb:       evaluation.AvgLogProb,
-			BigramAdjustment: evaluation.BigramAdjustment,
+			Candidate:       candidate,
+			Score:           evaluation.Score,
+			Threshold:       opt.Threshold,
+			HardRule:        evaluation.HardRule,
+			SoftRules:       append([]Rule(nil), evaluation.SoftRules...),
+			ProbabilityBand: evaluation.ProbabilityBand,
+			AvgLogProb:      evaluation.AvgLogProb,
+			ModelAdjustment: evaluation.ModelAdjustment,
 		}
 
 		if evaluation.HardReject {

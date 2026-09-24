@@ -63,10 +63,10 @@ func PrintTuneReport(result gen.Result, seed int64, userSeed bool) {
 		fmt.Printf("  candidate=%s score=%d threshold=%d decision=%s\n", entry.Candidate, entry.Score, entry.Threshold, decision)
 		fmt.Printf("  soft_rules=%s\n", formatSoftRules(entry.SoftRules))
 		if math.IsNaN(entry.AvgLogProb) {
-			fmt.Printf("  bigram_probability=unavailable band=%s adjustment=%d\n", entry.ProbabilityBand.Name, entry.BigramAdjustment)
+			fmt.Printf("  trigram_probability=unavailable band=%s adjustment=%d\n", entry.ProbabilityBand.Name, entry.ModelAdjustment)
 			continue
 		}
-		fmt.Printf("  bigram_probability=%.4f band=%s adjustment=%d\n", entry.AvgLogProb, entry.ProbabilityBand.Name, entry.BigramAdjustment)
+		fmt.Printf("  trigram_probability=%.4f band=%s adjustment=%d\n", entry.AvgLogProb, entry.ProbabilityBand.Name, entry.ModelAdjustment)
 	}
 }
 

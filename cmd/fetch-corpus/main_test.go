@@ -1,7 +1,6 @@
 package main
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/dashmage/namegen/internal/data"
@@ -36,10 +35,9 @@ func TestHardRuleAuditCountsOverlappingHits(t *testing.T) {
 }
 
 func TestCommittedCorpusPassesGeneratorHardRules(t *testing.T) {
-	path := filepath.Join("..", "..", "internal", "data", "corpora", "wikidata_company_brand.txt")
-	words, err := data.LoadWordsFromFile(path)
+	words, err := data.LoadCompanyBrandWords()
 	if err != nil {
-		t.Fatalf("LoadWordsFromFile() error = %v", err)
+		t.Fatalf("LoadCompanyBrandWords() error = %v", err)
 	}
 	if len(words) < 1000 {
 		t.Fatalf("cleaned corpus has %d names, want at least 1000", len(words))

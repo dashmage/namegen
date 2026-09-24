@@ -8,7 +8,7 @@ The current implementation uses three layers:
 
 1. Template-based random name construction (using a vowel/consonant rhythm)
 2. Rule-based filtering and penalties
-3. Corpus-trained interpolated trigram scoring with bigram backoff
+3. Corpus-trained character trigram scoring
 
 ## Install
 ```bash
@@ -70,7 +70,7 @@ At a high level, the CLI loops until it has produced the requested number of nam
 2. Set a baseline score and threshold for an acceptable name.
 3. Apply hard rules (rules that reject the candidate immediately on failure)
 4. Apply soft rules (rules that subtract penalties from the score)
-5. Apply a score adjustment using the interpolated trigram model trained on human and company/brand names
+5. Apply a score adjustment using the corpus-trained trigram model
 6. Accept the candidate if final score is above threshold
 
 Accepted names are unique within a run; repeated candidates are rejected and count against the attempt limit.
@@ -130,125 +130,30 @@ Soft rules
 - repeated identical vowel pairs
 - doubled consonant endings
 
-## Character n-gram model
+## Character trigram model
 
-Name scoring uses a character trigram model with smoothed bigram backoff. The extra context helps distinguish sequences with the same adjacent letters, while bigram backoff stabilizes sparse contexts. A standalone bigram model remains as the evaluation baseline.
+Name scoring uses one character trigram model with Laplace smoothing, conditioning each letter on the previous two letters.
 
-- [Default corpus file](./internal/data/names.txt)
-- [External company/brand corpus](./internal/data/corpora/wikidata_company_brand.txt)
-- [Corpus preparation command](./cmd/fetch-corpus/main.go)
-- [Hard-rule audit command](./cmd/audit-corpus/main.go)
-- [Loader](./internal/data/corpus.go)
-- [Model](./internal/gen/model.go)
+- [Human-name corpus](./internal/data/names.txt)
+- [Company/brand corpus](./internal/data/corpora/wikidata_company_brand.txt)
+- [Corpus refresh command](./cmd/fetch-corpus/main.go)
+- [Corpus loader](./internal/data/corpus.go)
+- [Model implementation](./internal/gen/model.go)
 
-Both corpus files are embedded; the loader combines and deduplicates them while preserving each source file and its provenance.
+Both corpora are embedded, combined, and deduplicated before training.
 
-### Bigram backoff fields
+### Training and smoothing
 
-`BigramModel` stores the fallback transition statistics:
+For each corpus word:
 
-- `Count map[[2]byte]int`
-  - counts of each transition, e.g. (`t`,`h`) -> 1842
-- `Row map[byte]int`
-  - total transitions leaving a character, e.g. `t` -> sum of all `t -> *`
-- `Alpha float64`
-  - Laplace smoothing factor
+1. normalize to lowercase `a-z`
+2. add two start tokens and one end token: `^^word$`
+3. count every three-character window `(a,b,c)` and the number of transitions for each `(a,b)` context
 
-Constants:
+The trigram probability is:
 
-- `StartToken = '^'`
-- `EndToken = '$'`
-- `VocabSize = 28` (`a-z` plus `^`, `$`)
+`P(c|ab) = (Count(a,b,c) + alpha) / (Row(a,b) + alpha * VocabSize)`
 
-### Training
+`alpha` defaults to `0.5`; `VocabSize` is 28 (`a-z`, `^`, and `$`). Smoothing gives unseen contexts a uniform probability across the vocabulary rather than consulting a separate model.
 
-For each corpus word, the bigram backoff model:
-
-1. normalizes to lowercase `a-z`
-2. adds boundaries: `^word$`
-3. counts each adjacent pair `(a,b)` in `Count[(a,b)]` and increments `Row[a]`
-
-The trigram model also prepends a second start token, then counts each next character given the previous two characters. It interpolates that smoothed estimate with the bigram backoff using a configured backoff strength of 20.
-
-### Laplace smoothing
-
-Without smoothing, unseen transitions have probability 0, which can collapse the whole word probability.
-
-Laplace smoothing avoids that:
-
-`P(b|a) = (Count(a,b) + alpha) / (Row(a) + alpha * VocabSize)`
-
-This keeps unseen pairs possible but still low-probability.
-
-### Log probability
-
-Word probability is a product of many small values. Multiplication underflows and is harder to debug.
-
-Using logs converts products into sums:
-
-`log P(word) = sum(log P(next|current))`
-
-The models use **average** log probability so scores are comparable across lengths.
-
-The score adjustment is a bounded, piecewise-linear mapping of that average, rather than one fixed adjustment per band. It interpolates between these anchors:
-
-- `VeryLowProbCutoff` -> `-VeryLowProbPenalty`
-- `LowProbCutoff` -> `-LowProbPenalty`
-- `MidProbCutoff` -> `-MidProbPenalty`
-- `GoodProbBonusCutoff` -> `+GoodProbBonus`
-
-Values beyond the anchors are clamped. Probability bands remain as coarse diagnostic labels; the actual adjustment is stored with the band and uses the continuous score.
-
-The `InterpolatedTrigramModel` estimates `P(c|ab)` with Laplace smoothing and interpolates it with bigram backoff `P(c|b)`. The trigram weight is `count(ab) / (count(ab) + backoffStrength)`, so sparse contexts rely more on bigrams. The bigram distribution is an internal fallback; generation uses a single scoring model.
-
-### Bigram backoff example
-
-This calculation illustrates the bigram fallback probabilities used by the trigram model.
-
-Corpus words:
-
-- `lena`, `lora`, `nora`, `mila`, `mira`, `sora`
-
-Candidate name:
-
-- `lora`
-
-Transitions with boundaries:
-
-- `^ -> l`
-- `l -> o`
-- `o -> r`
-- `r -> a`
-- `a -> $`
-
-Assume `alpha = 0.5`, `VocabSize = 28`, and trained counts give:
-
-- `Count(^,l)=2`, `Row(^)=6`
-- `Count(l,o)=1`, `Row(l)=3`
-- `Count(o,r)=3`, `Row(o)=3`
-- `Count(r,a)=4`, `Row(r)=4`
-- `Count(a,$)=6`, `Row(a)=6`
-
-Then:
-
-- `P(l|^) = (2+0.5)/(6+14) = 0.125`, `ln = -2.079`
-- `P(o|l) = (1+0.5)/(3+14) = 0.0882`, `ln = -2.428`
-- `P(r|o) = (3+0.5)/(3+14) = 0.2059`, `ln = -1.580`
-- `P(a|r) = (4+0.5)/(4+14) = 0.2500`, `ln = -1.386`
-- `P($|a) = (6+0.5)/(6+14) = 0.3250`, `ln = -1.124`
-
-Log sum:
-
-- `-8.597`
-
-Average log probability:
-
-- `-8.597 / 5 = -1.719`
-
-Scoring flow example:
-
-1. hard rules pass
-2. no soft penalties triggered
-3. probability band for `-1.719` gives a small bonus
-4. final score stays above acceptance threshold
-5. candidate accepted as a name
+The model sums log probabilities, including start and end transitions, then averages them so scores are comparable across lengths. The resulting average maps to the configured score adjustment using the `VeryLowProbCutoff`, `LowProbCutoff`, `MidProbCutoff`, and `GoodProbBonusCutoff` anchors. Values outside the anchors are clamped; probability bands are diagnostic labels.

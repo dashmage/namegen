@@ -66,60 +66,33 @@ func TestFetchWikidataCompanyBrandNames(t *testing.T) {
 	}
 }
 
-func TestLoadProductionWordsCombinesAndDeduplicatesCorpora(t *testing.T) {
-	legacy, err := LoadWords()
+func TestLoadTrainingWordsCombinesAndDeduplicatesCorpora(t *testing.T) {
+	humanNames, err := loadEmbeddedWords("names.txt")
 	if err != nil {
-		t.Fatalf("LoadWords() error = %v", err)
+		t.Fatalf("load human-name corpus: %v", err)
 	}
-	production, err := LoadProductionWords()
+	trainingWords, err := LoadTrainingWords()
 	if err != nil {
-		t.Fatalf("LoadProductionWords() error = %v", err)
+		t.Fatalf("LoadTrainingWords() error = %v", err)
 	}
-	if len(production) <= len(legacy)+3000 {
-		t.Fatalf("production corpus size = %d, want legacy %d plus company/brand names", len(production), len(legacy))
+	if len(trainingWords) <= len(humanNames)+3000 {
+		t.Fatalf("training corpus size = %d, want human names %d plus company/brand names", len(trainingWords), len(humanNames))
 	}
 
-	seen := make(map[string]struct{}, len(production))
-	for _, word := range production {
+	seen := make(map[string]struct{}, len(trainingWords))
+	for _, word := range trainingWords {
 		key := strings.ToLower(word)
 		if _, duplicate := seen[key]; duplicate {
-			t.Errorf("duplicate production corpus word %q", word)
+			t.Errorf("duplicate training corpus word %q", word)
 		}
 		seen[key] = struct{}{}
 	}
 }
 
-func TestCommittedRawWikidataCorpusIsNormalizedAndUnique(t *testing.T) {
-	words, err := LoadWordsFromFile("corpora/wikidata_company_brand_raw.txt")
-	if err != nil {
-		t.Fatalf("LoadWordsFromFile() error = %v", err)
-	}
-	if len(words) < 5000 {
-		t.Fatalf("raw company/brand corpus has %d words, want at least 5000", len(words))
-	}
-
-	previous := ""
-	for _, word := range words {
-		if len(word) < 2 || len(word) > 12 {
-			t.Errorf("raw word %q has unsupported length", word)
-		}
-		for i := 0; i < len(word); i++ {
-			if word[i] < 'a' || word[i] > 'z' {
-				t.Errorf("raw word %q is not normalized lowercase ASCII", word)
-				break
-			}
-		}
-		if previous != "" && word <= previous {
-			t.Errorf("raw corpus is not sorted and unique at %q after %q", word, previous)
-		}
-		previous = word
-	}
-}
-
 func TestCommittedWikidataCorpusIsNormalizedAndUnique(t *testing.T) {
-	words, err := LoadWordsFromFile("corpora/wikidata_company_brand.txt")
+	words, err := loadEmbeddedWords("corpora/wikidata_company_brand.txt")
 	if err != nil {
-		t.Fatalf("LoadWordsFromFile() error = %v", err)
+		t.Fatalf("load company/brand corpus: %v", err)
 	}
 	if len(words) < 3000 {
 		t.Fatalf("committed company/brand corpus has %d words, want at least 3000", len(words))

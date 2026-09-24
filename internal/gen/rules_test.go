@@ -141,10 +141,10 @@ func TestEvaluateCapturesSoftPenaltiesAndDetails(t *testing.T) {
 	if hits.Soft["repeated_same_vowel_pair"] != 1 {
 		t.Fatalf("repeated_same_vowel_pair hits = %d, want 1", hits.Soft["repeated_same_vowel_pair"])
 	}
-	if evaluation.Score <= evaluation.BigramAdjustment {
-		t.Fatalf("Score = %d, want score to remain above bigram adjustment alone", evaluation.Score)
+	if evaluation.Score <= evaluation.ModelAdjustment {
+		t.Fatalf("Score = %d, want score to remain above model adjustment alone", evaluation.Score)
 	}
-	if evaluation.Score >= 100+evaluation.BigramAdjustment {
-		t.Fatalf("Score = %d, want soft rules to reduce score below base-plus-bigram", evaluation.Score)
+	if evaluation.Score >= 100+evaluation.ModelAdjustment {
+		t.Fatalf("Score = %d, want soft rules to reduce score below base-plus-model", evaluation.Score)
 	}
 }

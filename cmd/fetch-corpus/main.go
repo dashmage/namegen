@@ -26,12 +26,7 @@ func main() {
 func run() error {
 	limit := flag.Int("limit", 20000, "maximum Wikidata labels to query")
 	output := flag.String("output", "internal/data/corpora/wikidata_company_brand.txt", "hard-rule-filtered output corpus")
-	rawOutput := flag.String("raw-output", "internal/data/corpora/wikidata_company_brand_raw.txt", "normalized corpus before hard-rule filtering")
 	flag.Parse()
-
-	if filepath.Clean(*output) == filepath.Clean(*rawOutput) {
-		return fmt.Errorf("--output and --raw-output must be different paths")
-	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
@@ -43,20 +38,17 @@ func run() error {
 
 	filtered, audit := gen.FilterHardRuleValidNames(names, 10)
 	retrievedAt := time.Now().UTC().Format(time.RFC3339)
-	if err := writeCorpus(*rawOutput, names, *limit, retrievedAt, "not applied"); err != nil {
-		return fmt.Errorf("write raw corpus: %w", err)
-	}
-	if err := writeCorpus(*output, filtered, *limit, retrievedAt, "applied"); err != nil {
+	if err := writeCorpus(*output, filtered, *limit, retrievedAt, len(names)); err != nil {
 		return fmt.Errorf("write filtered corpus: %w", err)
 	}
 
-	fmt.Printf("raw labels: %d; hard-rule compatible: %d; rejected: %d\n", audit.CandidateCount, audit.AcceptedCount, audit.RejectedCount)
+	fmt.Printf("normalized labels: %d; hard-rule compatible: %d; rejected: %d\n", audit.CandidateCount, audit.AcceptedCount, audit.RejectedCount)
 	printAudit(os.Stderr, audit)
-	fmt.Printf("wrote filtered corpus to %s and raw corpus to %s\n", *output, *rawOutput)
+	fmt.Printf("wrote corpus to %s\n", *output)
 	return nil
 }
 
-func writeCorpus(path string, names []string, requestedLimit int, retrievedAt, hardRuleFilter string) error {
+func writeCorpus(path string, names []string, requestedLimit int, retrievedAt string, normalizedCount int) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
@@ -78,10 +70,10 @@ func writeCorpus(path string, names []string, requestedLimit int, retrievedAt, h
 		if _, err := fmt.Fprintf(writer, "# Requested label limit: %d\n", requestedLimit); err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintf(writer, "# Hard-rule filtering: %s\n", hardRuleFilter); err != nil {
+		if _, err := fmt.Fprintf(writer, "# Normalized unique labels before hard-rule filtering: %d\n", normalizedCount); err != nil {
 			return err
 		}
-		if _, err := fmt.Fprintf(writer, "# Names in file: %d\n", len(names)); err != nil {
+		if _, err := fmt.Fprintf(writer, "# Names passing generator hard rules: %d\n", len(names)); err != nil {
 			return err
 		}
 		for _, name := range names {

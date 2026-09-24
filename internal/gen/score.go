@@ -10,7 +10,7 @@ import (
 
 var (
 	defaultModelOnce sync.Once
-	defaultModel     *InterpolatedTrigramModel
+	defaultModel     *TrigramModel
 	defaultModelErr  error
 )
 
@@ -27,26 +27,26 @@ func NewRuleHits() RuleHits {
 }
 
 type Evaluation struct {
-	Score            int
-	HardReject       bool
-	HardRule         string
-	SoftRules        []Rule
-	ProbabilityBand  ProbabilityBand
-	BigramAdjustment int
-	AvgLogProb       float64
+	Score           int
+	HardReject      bool
+	HardRule        string
+	SoftRules       []Rule
+	ProbabilityBand ProbabilityBand
+	ModelAdjustment int
+	AvgLogProb      float64
 }
 
-// loadDefaultModel trains the production interpolated trigram model from the
-// combined embedded name and company/brand corpora.
-func loadDefaultModel() (*InterpolatedTrigramModel, error) {
+// loadDefaultModel trains a reusable trigram model from the combined embedded
+// human-name and company/brand corpora.
+func loadDefaultModel() (*TrigramModel, error) {
 	defaultModelOnce.Do(func() {
-		words, err := data.LoadProductionWords()
+		words, err := data.LoadTrainingWords()
 		if err != nil {
 			defaultModelErr = err
 			return
 		}
 
-		m := NewInterpolatedTrigramModel(defaults.BaseAlpha)
+		m := NewTrigramModel(defaults.BaseAlpha)
 		m.Train(words)
 		defaultModel = m
 	})
@@ -92,8 +92,8 @@ func Evaluate(name string, hits *RuleHits, captureAttemptDetails bool) Evaluatio
 	model, err := loadDefaultModel()
 	if err == nil && model != nil {
 		evaluation.ProbabilityBand, evaluation.AvgLogProb = model.ScoreAdjustment(name)
-		evaluation.BigramAdjustment = evaluation.ProbabilityBand.Value
-		evaluation.Score += evaluation.BigramAdjustment
+		evaluation.ModelAdjustment = evaluation.ProbabilityBand.Value
+		evaluation.Score += evaluation.ModelAdjustment
 	}
 
 	return evaluation

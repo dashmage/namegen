@@ -22,16 +22,16 @@ type Result struct {
 
 // Attempt records scoring and rejection context for one candidate.
 type Attempt struct {
-	Candidate        string
-	Score            int
-	Threshold        int
-	Accepted         bool
-	RejectReason     string
-	HardRule         string
-	SoftRules        []Rule
-	ProbabilityBand  ProbabilityBand
-	AvgLogProb       float64
-	BigramAdjustment int
+	Candidate       string
+	Score           int
+	Threshold       int
+	Accepted        bool
+	RejectReason    string
+	HardRule        string
+	SoftRules       []Rule
+	ProbabilityBand ProbabilityBand
+	AvgLogProb      float64
+	ModelAdjustment int
 }
 
 // HardRuleStats returns the non-zero hard rules that were triggered during generation.

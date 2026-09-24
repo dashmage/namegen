@@ -16,6 +16,93 @@ func TestNormalizeWord(t *testing.T) {
 	}
 }
 
+func TestTrigramLogProbSmoothsUnseenContext(t *testing.T) {
+	model := NewTrigramModel(defaults.BaseAlpha)
+	model.Train([]string{"lora", "lena"})
+
+	got := model.LogProb('x', 'z', 'q')
+	want := math.Log(1 / float64(defaults.VocabSize))
+	if math.Abs(got-want) > 1e-12 {
+		t.Fatalf("unseen-context log probability = %.12f, want uniform smoothed value %.12f", got, want)
+	}
+}
+
+func TestTrigramUsesTwoCharacterContext(t *testing.T) {
+	words := []string{"shana", "shana", "shana", "shana", "shana", "thena", "thena", "thena", "thena", "thena"}
+	model := NewTrigramModel(defaults.BaseAlpha)
+	model.Train(words)
+
+	shProbability := math.Exp(model.LogProb('s', 'h', 'a'))
+	thProbability := math.Exp(model.LogProb('t', 'h', 'a'))
+	if shProbability <= thProbability {
+		t.Fatalf("P(a|sh) = %.4f, P(a|th) = %.4f; want context-specific probabilities", shProbability, thProbability)
+	}
+}
+
+func TestAvgLogProbNormalizesWithoutChangingTransitions(t *testing.T) {
+	model := NewTrigramModel(defaults.BaseAlpha)
+	model.Train([]string{"lora"})
+
+	want := model.AvgLogProb("lora")
+	if got := model.AvgLogProb("Lo-ra_123!"); got != want {
+		t.Fatalf("AvgLogProb(normalized variant) = %f, want %f", got, want)
+	}
+}
+
+func TestTrigramModelScoresHeldOutCorpusAboveGeneratedNames(t *testing.T) {
+	words, err := data.LoadTrainingWords()
+	if err != nil {
+		t.Fatalf("LoadTrainingWords() error = %v", err)
+	}
+
+	train := make([]string, 0, len(words)*4/5)
+	heldout := make([]string, 0, len(words)/5)
+	// A content-based split is deterministic and keeps duplicate spellings together.
+	for _, word := range words {
+		if crc32.ChecksumIEEE([]byte(word))%5 == 0 {
+			heldout = append(heldout, word)
+		} else {
+			train = append(train, word)
+		}
+	}
+	if len(train) == 0 || len(heldout) == 0 {
+		t.Fatalf("corpus split produced train=%d and heldout=%d words", len(train), len(heldout))
+	}
+
+	model := NewTrigramModel(defaults.BaseAlpha)
+	model.Train(train)
+	SetSeed(42)
+
+	heldoutTotal := 0.0
+	generatedTotal := 0.0
+	for _, word := range heldout {
+		heldoutTotal += model.AvgLogProb(word)
+		generatedTotal += model.AvgLogProb(RandomName(len(word)))
+	}
+
+	heldoutMean := heldoutTotal / float64(len(heldout))
+	generatedMean := generatedTotal / float64(len(heldout))
+	if heldoutMean <= generatedMean {
+		t.Fatalf("held-out mean log-probability = %.4f, generated-name mean = %.4f; want held-out names to score higher", heldoutMean, generatedMean)
+	}
+}
+
+func TestTrigramModelPrefersSeenSequence(t *testing.T) {
+	model := NewTrigramModel(defaults.BaseAlpha)
+	model.Train([]string{"lora", "lena", "lora", "lena"})
+
+	seenScore := model.AvgLogProb("lora")
+	unseenScore := model.AvgLogProb("zxzx")
+	if seenScore <= unseenScore {
+		t.Fatalf("seen name score = %.4f, unseen name score = %.4f; want seen name higher", seenScore, unseenScore)
+	}
+
+	band, avgLogProb := model.ScoreAdjustment("lora")
+	if band.Value != scoreAdjustmentFor(avgLogProb) {
+		t.Fatalf("ScoreAdjustment value = %d, want %d", band.Value, scoreAdjustmentFor(avgLogProb))
+	}
+}
+
 func TestScoreAdjustmentInterpolatesAndClamps(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -45,111 +132,5 @@ func TestScoreAdjustmentInterpolatesAndClamps(t *testing.T) {
 			}
 		})
 		previous = test.want
-	}
-}
-
-func TestInterpolatedTrigramBacksOffForUnseenContext(t *testing.T) {
-	model := NewInterpolatedTrigramModel(defaults.BaseAlpha)
-	model.Train([]string{"lora", "lena"})
-
-	got := model.InterpolatedLogProb('x', 'z', 'q')
-	want := model.bigram.LogProb('z', 'q')
-	if math.Abs(got-want) > 1e-12 {
-		t.Fatalf("unseen-context interpolated log probability = %.12f, want bigram backoff %.12f", got, want)
-	}
-}
-
-func TestInterpolatedTrigramUsesTwoCharacterContext(t *testing.T) {
-	words := []string{"shana", "shana", "shana", "shana", "shana", "thena", "thena", "thena", "thena", "thena"}
-	model := NewInterpolatedTrigramModel(defaults.BaseAlpha)
-	model.Train(words)
-
-	trigramProbability := math.Exp(model.InterpolatedLogProb('s', 'h', 'a'))
-	bigramProbability := math.Exp(model.bigram.LogProb('h', 'a'))
-	if trigramProbability <= bigramProbability {
-		t.Fatalf("P(a|sh) = %.4f, P(a|h) = %.4f; want context-specific probability to be higher", trigramProbability, bigramProbability)
-	}
-}
-
-func TestAvgLogProbNormalizesWithoutChangingTransitions(t *testing.T) {
-	model := NewBigramModel(defaults.BaseAlpha)
-	model.Train([]string{"lora"})
-
-	want := model.AvgLogProb("lora")
-	if got := model.AvgLogProb("Lo-ra_123!"); got != want {
-		t.Fatalf("AvgLogProb(normalized variant) = %f, want %f", got, want)
-	}
-}
-
-func TestBigramAndInterpolatedTrigramHeldOutComparison(t *testing.T) {
-	words, err := data.LoadWords()
-	if err != nil {
-		t.Fatalf("LoadWords() error = %v", err)
-	}
-
-	train := make([]string, 0, len(words)*4/5)
-	heldout := make([]string, 0, len(words)/5)
-	// A content-based split is deterministic and keeps duplicate spellings together.
-	for _, word := range words {
-		if crc32.ChecksumIEEE([]byte(word))%5 == 0 {
-			heldout = append(heldout, word)
-		} else {
-			train = append(train, word)
-		}
-	}
-	if len(train) == 0 || len(heldout) == 0 {
-		t.Fatalf("corpus split produced train=%d and heldout=%d words", len(train), len(heldout))
-	}
-
-	model := NewBigramModel(defaults.BaseAlpha)
-	model.Train(train)
-	trigramModel := NewInterpolatedTrigramModel(defaults.BaseAlpha)
-	trigramModel.Train(train)
-
-	SetSeed(42)
-	bigramHeldoutTotal := 0.0
-	bigramGeneratedTotal := 0.0
-	trigramHeldoutTotal := 0.0
-	trigramGeneratedTotal := 0.0
-	for _, word := range heldout {
-		generated := RandomName(len(word))
-		bigramHeldoutTotal += model.AvgLogProb(word)
-		bigramGeneratedTotal += model.AvgLogProb(generated)
-		trigramHeldoutTotal += trigramModel.AvgLogProb(word)
-		trigramGeneratedTotal += trigramModel.AvgLogProb(generated)
-	}
-
-	bigramHeldoutMean := bigramHeldoutTotal / float64(len(heldout))
-	bigramGeneratedMean := bigramGeneratedTotal / float64(len(heldout))
-	trigramHeldoutMean := trigramHeldoutTotal / float64(len(heldout))
-	trigramGeneratedMean := trigramGeneratedTotal / float64(len(heldout))
-	bigramGap := bigramHeldoutMean - bigramGeneratedMean
-	trigramGap := trigramHeldoutMean - trigramGeneratedMean
-	t.Logf("held-out vs generated mean log-probability gap: bigram=%.4f interpolated-trigram=%.4f", bigramGap, trigramGap)
-
-	if bigramGap <= 0 {
-		t.Fatalf("bigram held-out mean = %.4f, generated-name mean = %.4f; want held-out names to score higher", bigramHeldoutMean, bigramGeneratedMean)
-	}
-	if trigramGap <= 0 {
-		t.Fatalf("interpolated trigram held-out mean = %.4f, generated-name mean = %.4f; want held-out names to score higher", trigramHeldoutMean, trigramGeneratedMean)
-	}
-}
-
-func TestBigramModelPrefersSeenTransitions(t *testing.T) {
-	model := NewBigramModel(defaults.BaseAlpha)
-	model.Train([]string{"lena", "lora", "nora", "mila", "mira", "sora"})
-
-	goodWord := "lora"
-	badWord := "zxzx"
-
-	goodScore := model.AvgLogProb(goodWord)
-	badScore := model.AvgLogProb(badWord)
-	band, avgLogProb := model.ScoreAdjustment(goodWord)
-
-	if band.Value != scoreAdjustmentFor(avgLogProb) {
-		t.Fatalf("ScoreAdjustment value = %d, want %d", band.Value, scoreAdjustmentFor(avgLogProb))
-	}
-	if !(goodScore > badScore) {
-		t.Fatalf("AvgLogProb(%q) = %f, AvgLogProb(%q) = %f, want seen word to score higher", goodWord, goodScore, badWord, badScore)
 	}
 }

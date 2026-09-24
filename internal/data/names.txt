@@ -1,4 +1,4 @@
-# Legacy human-name source used alongside the company/brand corpus in production
+# Human-name source combined with company/brand names for training
 # Sources: SSA Top Names Over the Last 100 Years (1925-2024), names scraped from the web
 
 aaron
