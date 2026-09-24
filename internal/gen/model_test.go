@@ -1,8 +1,10 @@
 package gen
 
 import (
+	"hash/crc32"
 	"testing"
 
+	"github.com/dashmage/namegen/internal/data"
 	"github.com/dashmage/namegen/internal/defaults"
 )
 
@@ -52,6 +54,44 @@ func TestAvgLogProbNormalizesWithoutChangingTransitions(t *testing.T) {
 	want := model.AvgLogProb("lora")
 	if got := model.AvgLogProb("Lo-ra_123!"); got != want {
 		t.Fatalf("AvgLogProb(normalized variant) = %f, want %f", got, want)
+	}
+}
+
+func TestDefaultBigramModelScoresHeldOutCorpusAboveGeneratedNames(t *testing.T) {
+	words, err := data.LoadWords()
+	if err != nil {
+		t.Fatalf("LoadWords() error = %v", err)
+	}
+
+	train := make([]string, 0, len(words)*4/5)
+	heldout := make([]string, 0, len(words)/5)
+	// A content-based split is deterministic and keeps duplicate spellings together.
+	for _, word := range words {
+		if crc32.ChecksumIEEE([]byte(word))%5 == 0 {
+			heldout = append(heldout, word)
+		} else {
+			train = append(train, word)
+		}
+	}
+	if len(train) == 0 || len(heldout) == 0 {
+		t.Fatalf("corpus split produced train=%d and heldout=%d words", len(train), len(heldout))
+	}
+
+	model := NewBigramModel(defaults.BaseAlpha)
+	model.Train(train)
+
+	SetSeed(42)
+	heldoutTotal := 0.0
+	generatedTotal := 0.0
+	for _, word := range heldout {
+		heldoutTotal += model.AvgLogProb(word)
+		generatedTotal += model.AvgLogProb(RandomName(len(word)))
+	}
+
+	heldoutMean := heldoutTotal / float64(len(heldout))
+	generatedMean := generatedTotal / float64(len(heldout))
+	if heldoutMean <= generatedMean {
+		t.Fatalf("held-out corpus mean log-probability = %.4f, generated-name mean = %.4f; want held-out names to score higher", heldoutMean, generatedMean)
 	}
 }
 
