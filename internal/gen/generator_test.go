@@ -9,10 +9,10 @@ import (
 func TestRandomNameContainingKeepsSubstringInternal(t *testing.T) {
 	SetSeed(42)
 	for range 50 {
-		name := RandomNameContaining(8, "AbC")
-		start := strings.Index(name, "abc")
-		if len(name) != 8 || start <= 0 || start+len("abc") >= len(name) {
-			t.Fatalf("RandomNameContaining(8, %q) = %q, want lowercase substring with a character on each side", "AbC", name)
+		name := RandomNameContaining(8, "OrA")
+		start := strings.Index(name, "ora")
+		if len(name) != 8 || start <= 0 || start+len("ora") >= len(name) {
+			t.Fatalf("RandomNameContaining(8, %q) = %q, want lowercase substring with a character on each side", "OrA", name)
 		}
 	}
 }
@@ -23,6 +23,40 @@ func TestRandomNameContainingRejectsInvalidInput(t *testing.T) {
 	}
 	if got := RandomNameContaining(5, "a-b"); got != "" {
 		t.Fatalf("RandomNameContaining with punctuation = %q, want empty", got)
+	}
+	if got := RandomNameContaining(5, "abc"); got != "" {
+		t.Fatalf("RandomNameContaining with forbidden consonant adjacency = %q, want empty", got)
+	}
+}
+
+func TestBuildRhythmPatternKeepsCompleteNuclei(t *testing.T) {
+	SetSeed(84)
+	for length := 2; length <= 24; length++ {
+		for range 100 {
+			pattern := buildRhythmPattern(length)
+			if len(pattern) != length {
+				t.Fatalf("buildRhythmPattern(%d) length = %d", length, len(pattern))
+			}
+			if !strings.Contains(string(pattern), "V") {
+				t.Fatalf("buildRhythmPattern(%d) = %q, has no vowel nucleus", length, pattern)
+			}
+			for i := 2; i < len(pattern); i++ {
+				if pattern[i-2] == 'V' && pattern[i-1] == 'V' && pattern[i] == 'V' {
+					t.Fatalf("buildRhythmPattern(%d) = %q, contains a triple-vowel run", length, pattern)
+				}
+			}
+		}
+	}
+}
+
+func TestWeightedTemplateDoesNotLeavePartialSyllable(t *testing.T) {
+	SetSeed(19)
+	for remaining := 2; remaining <= 30; remaining++ {
+		template := weightedTemplate(remaining)
+		remainder := remaining - len(template)
+		if remainder < 0 || remainder == 1 {
+			t.Fatalf("template %q leaves invalid remainder %d from %d", template, remainder, remaining)
+		}
 	}
 }
 

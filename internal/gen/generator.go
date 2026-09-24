@@ -1,6 +1,7 @@
 package gen
 
 import (
+	"fmt"
 	"math/rand"
 	"strings"
 	"sync"
@@ -18,10 +19,12 @@ type Options struct {
 	TuneEnabled bool
 }
 
-var rhythmTemplates = []struct {
+type rhythmTemplate struct {
 	Pattern string
 	Weight  int
-}{
+}
+
+var rhythmTemplates = []rhythmTemplate{
 	{Pattern: "CV", Weight: 5},
 	{Pattern: "CVC", Weight: 6},
 	{Pattern: "CVV", Weight: 2},
@@ -61,7 +64,7 @@ func RandomNameContaining(length int, substring string) string {
 	if substring == "" {
 		return RandomName(length)
 	}
-	if !validSubstringOptions(length, substring) {
+	if ValidateSubstring(length, substring) != nil {
 		return ""
 	}
 	substring = strings.ToLower(substring)
@@ -102,7 +105,7 @@ func Generate(opt Options) Result {
 	if opt.TuneEnabled {
 		result.AttemptLog = make([]Attempt, 0)
 	}
-	if opt.Count <= 0 || opt.MaxAttempts <= 0 || opt.Length <= 0 || !validSubstringOptions(opt.Length, opt.Substring) {
+	if opt.Count <= 0 || opt.MaxAttempts <= 0 || opt.Length <= 0 || ValidateSubstring(opt.Length, opt.Substring) != nil {
 		return result
 	}
 
@@ -175,20 +178,32 @@ func Generate(opt Options) Result {
 	return result
 }
 
-func validSubstringOptions(length int, substring string) bool {
+// ValidateSubstring checks that a required substring can fit within the given
+// name length and does not itself violate hard pronunciation rules.
+func ValidateSubstring(length int, substring string) error {
 	if substring == "" {
-		return true
+		return nil
 	}
 	if length < len(substring)+2 {
-		return false
+		return fmt.Errorf("length must be at least %d when substring length is %d", len(substring)+2, len(substring))
 	}
 	for i := 0; i < len(substring); i++ {
 		ch := substring[i]
 		if (ch < 'a' || ch > 'z') && (ch < 'A' || ch > 'Z') {
-			return false
+			return fmt.Errorf("substring must contain only ASCII letters")
 		}
 	}
-	return true
+	substring = strings.ToLower(substring)
+	if ThreeConsecutiveConsonants(substring) {
+		return fmt.Errorf("substring contains three consecutive consonants")
+	}
+	if TripleSameLetter(substring) {
+		return fmt.Errorf("substring contains three repeated letters")
+	}
+	if IllegalConsonantAdjacency(substring) {
+		return fmt.Errorf("substring contains a disallowed consonant sequence")
+	}
+	return nil
 }
 
 // isVowel reports whether ch exists in the configured vowel set.
@@ -196,17 +211,19 @@ func isVowel(ch byte) bool {
 	return strings.ContainsRune(defaults.Vowels, rune(ch))
 }
 
-// buildRhythmPattern assembles a weighted CV pattern to the requested length.
+// buildRhythmPattern assembles complete weighted syllable shapes to the requested length.
 func buildRhythmPattern(length int) []byte {
-	pattern := make([]byte, 0, length)
+	if length <= 0 {
+		return nil
+	}
 
-	for len(pattern) < length {
-		next := weightedTemplate()
-		remaining := length - len(pattern)
-		if len(next) > remaining {
-			next = next[:remaining]
-		}
-		pattern = append(pattern, next...)
+	pattern := make([]byte, 0, length)
+	remaining := length
+	lastTemplate := ""
+	for remaining > 0 {
+		lastTemplate = weightedTemplate(remaining)
+		pattern = append(pattern, lastTemplate...)
+		remaining -= len(lastTemplate)
 	}
 
 	for i := 1; i < len(pattern)-1; i++ {
@@ -215,27 +232,46 @@ func buildRhythmPattern(length int) []byte {
 		}
 	}
 
-	if len(pattern) > 0 && pattern[len(pattern)-1] == 'V' && rng.Intn(100) < defaults.FinalConsonantBiasPercent {
+	// Add a final consonant only when the last syllable retains a vowel nucleus.
+	if len(pattern) > 0 && pattern[len(pattern)-1] == 'V' && strings.Count(lastTemplate, "V") > 1 && rng.Intn(100) < defaults.FinalConsonantBiasPercent {
 		pattern[len(pattern)-1] = 'C'
 	}
 
 	return pattern
 }
 
-// weightedTemplate chooses a rhythm template using configured weights.
-func weightedTemplate() string {
-	total := 0
-	for _, t := range rhythmTemplates {
-		total += t.Weight
+// weightedTemplate selects a template that leaves either no remainder or a
+// remainder large enough to form another complete template.
+func weightedTemplate(remaining int) string {
+	if remaining == 1 {
+		return selectWeightedTemplate(rhythmTemplates)[:1]
 	}
-	roll := rng.Intn(total)
-	for _, t := range rhythmTemplates {
-		if roll < t.Weight {
-			return t.Pattern
+
+	eligible := make([]rhythmTemplate, 0, len(rhythmTemplates))
+	for _, template := range rhythmTemplates {
+		remainder := remaining - len(template.Pattern)
+		if remainder < 0 || remainder == 1 {
+			continue
 		}
-		roll -= t.Weight
+		eligible = append(eligible, template)
 	}
-	return "CVC"
+
+	return selectWeightedTemplate(eligible)
+}
+
+func selectWeightedTemplate(templates []rhythmTemplate) string {
+	totalWeight := 0
+	for _, template := range templates {
+		totalWeight += template.Weight
+	}
+	roll := rng.Intn(totalWeight)
+	for _, template := range templates {
+		if roll < template.Weight {
+			return template.Pattern
+		}
+		roll -= template.Weight
+	}
+	return templates[len(templates)-1].Pattern
 }
 
 // randomConsonant returns a random consonant from the default pool.

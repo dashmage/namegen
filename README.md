@@ -89,22 +89,23 @@ Instead of drawing each letter uniformly from `a-z`, name candidates are built f
 - `C` = consonant
 - `V` = vowel
 
-The generator samples from weighted templates:
+The generator samples complete syllable-shaped templates where the requested length allows them:
 
 - `CV` (weight 5)
 - `CVC` (weight 6)
 - `CVV` (weight 2)
 - `VC` (weight 1)
 
-Templates are concatenated until the requested length is reached, then trimmed to exact length.
+Templates are concatenated only when the remaining length can be filled by complete templates; the final template is no longer cut off. A one-letter request uses a small fallback because it cannot form a complete syllable shape.
 
 Additional shaping:
 
 - prevent `VVV` triplets by converting the middle `V` to `C`
-- slightly bias final character toward consonants
+- slightly bias the final template toward a consonant ending without removing its only vowel nucleus
 - de-emphasize `y` in vowel sampling
+- reject a required `--substring` if it contains a hard-rule violation that would make every candidate impossible
 
-This structure dramatically improves pronounceability compared to fully uniform random letters. Check out [generator.go](./internal/gen/generator.go) to get a better idea.
+These heuristics encourage pronounceable-looking output, but they are not a guarantee of how people will pronounce a coined name. Check out [generator.go](./internal/gen/generator.go) for the implementation.
 
 ## Rules: hard vs soft
 

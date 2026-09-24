@@ -4,7 +4,7 @@ import "testing"
 
 func TestValidate(t *testing.T) {
 	validSubstring := NewConfig(10, 5, 5, 1, false, false, false, 80)
-	validSubstring.Substring = "AbC"
+	validSubstring.Substring = "OrA"
 	missingExplicitLength := NewConfig(10, 5, 5, 1, false, false, false, 80)
 	missingExplicitLength.LengthProvided = false
 	missingExplicitLength.Substring = "abc"
@@ -12,6 +12,8 @@ func TestValidate(t *testing.T) {
 	shortSubstringLength.Substring = "abc"
 	invalidSubstring := NewConfig(10, 5, 5, 1, false, false, false, 80)
 	invalidSubstring.Substring = "a-b"
+	impossibleSubstring := NewConfig(10, 5, 5, 1, false, false, false, 80)
+	impossibleSubstring.Substring = "abc"
 
 	tests := []struct {
 		name    string
@@ -56,6 +58,11 @@ func TestValidate(t *testing.T) {
 		{
 			name:    "rejects non ascii letters in substring",
 			config:  invalidSubstring,
+			wantErr: true,
+		},
+		{
+			name:    "rejects substring that violates hard pronunciation rules",
+			config:  impossibleSubstring,
 			wantErr: true,
 		},
 	}

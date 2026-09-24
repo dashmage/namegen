@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dashmage/namegen/internal/defaults"
+	"github.com/dashmage/namegen/internal/gen"
 )
 
 type Config struct {
@@ -92,20 +93,5 @@ func Validate(config Config) error {
 	if !config.LengthProvided {
 		return fmt.Errorf("--substring requires an explicit --length")
 	}
-	if !isASCIIAlpha(config.Substring) {
-		return fmt.Errorf("substring must contain only ASCII letters")
-	}
-	if config.Length < len(config.Substring)+2 {
-		return fmt.Errorf("length must be at least %d when substring length is %d", len(config.Substring)+2, len(config.Substring))
-	}
-	return nil
-}
-
-func isASCIIAlpha(value string) bool {
-	for i := 0; i < len(value); i++ {
-		if (value[i] < 'a' || value[i] > 'z') && (value[i] < 'A' || value[i] > 'Z') {
-			return false
-		}
-	}
-	return true
+	return gen.ValidateSubstring(config.Length, config.Substring)
 }
