@@ -137,6 +137,7 @@ Production scoring uses a character trigram model with smoothed bigram backoff. 
 - [Default corpus file](./internal/data/names.txt)
 - [External company/brand corpus](./internal/data/corpora/wikidata_company_brand.txt)
 - [Corpus preparation command](./cmd/fetch-corpus/main.go)
+- [Hard-rule audit command](./cmd/audit-corpus/main.go)
 - [Loader](./internal/data/corpus.go)
 - [Model](./internal/gen/model.go)
 

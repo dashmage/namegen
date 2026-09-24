@@ -8,9 +8,9 @@ import (
 	"github.com/dashmage/namegen/internal/gen"
 )
 
-func TestFilterModelCompatibleNames(t *testing.T) {
+func TestHardRuleAuditCountsOverlappingHits(t *testing.T) {
 	input := []string{"lora", "palo", "bcd", "kfc", "acmeq", "aaa"}
-	got := filterModelCompatibleNames(input)
+	got, audit := gen.FilterHardRuleValidNames(input, 2)
 	want := []string{"lora", "palo"}
 	if len(got) != len(want) {
 		t.Fatalf("filtered names = %v, want %v", got, want)
@@ -19,6 +19,19 @@ func TestFilterModelCompatibleNames(t *testing.T) {
 		if got[i] != want[i] {
 			t.Fatalf("filtered names = %v, want %v", got, want)
 		}
+	}
+	if audit.CandidateCount != 6 || audit.AcceptedCount != 2 || audit.RejectedCount != 4 {
+		t.Fatalf("audit totals = %+v, want 6 candidates, 2 accepted, 4 rejected", audit)
+	}
+	hits := make(map[string]int, len(audit.Rules))
+	for _, rule := range audit.Rules {
+		hits[rule.Name] = rule.Hits
+		if len(rule.Examples) > 2 {
+			t.Fatalf("rule %q example count = %d, want max 2", rule.Name, len(rule.Examples))
+		}
+	}
+	if hits["three_consecutive_consonants"] != 2 || hits["illegal_consonant_adjacency"] != 3 || hits["missing_core_vowel"] != 2 {
+		t.Fatalf("independent rule hits = %v, want overlapping counts", hits)
 	}
 }
 

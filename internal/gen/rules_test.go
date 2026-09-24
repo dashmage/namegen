@@ -59,6 +59,29 @@ func TestEvaluateHardRuleShortCircuitsScoring(t *testing.T) {
 	}
 }
 
+func TestFilterHardRuleValidNamesReportsOverlappingRuleHits(t *testing.T) {
+	names := []string{"lora", "bcd", "kfc", "acmeq", "aaa"}
+	accepted, audit := FilterHardRuleValidNames(names, 2)
+
+	if len(accepted) != 1 || accepted[0] != "lora" {
+		t.Fatalf("accepted names = %v, want [lora]", accepted)
+	}
+	if audit.CandidateCount != 5 || audit.AcceptedCount != 1 || audit.RejectedCount != 4 {
+		t.Fatalf("audit totals = %+v, want 5 candidates, 1 accepted, 4 rejected", audit)
+	}
+
+	hits := make(map[string]int, len(audit.Rules))
+	for _, rule := range audit.Rules {
+		hits[rule.Name] = rule.Hits
+		if len(rule.Examples) > 2 {
+			t.Errorf("rule %q has %d examples, want limit 2", rule.Name, len(rule.Examples))
+		}
+	}
+	if hits["three_consecutive_consonants"] != 2 || hits["illegal_consonant_adjacency"] != 3 || hits["missing_core_vowel"] != 2 || hits["illegal_ending"] != 1 || hits["triple_same_letter"] != 1 {
+		t.Fatalf("per-rule hits = %v, unexpected hard-rule audit counts", hits)
+	}
+}
+
 func TestConsonantPoolMatchesVowelClassifier(t *testing.T) {
 	for i := 0; i < len(defaults.Consonants); i++ {
 		if isVowel(defaults.Consonants[i]) {

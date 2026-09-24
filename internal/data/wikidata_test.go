@@ -89,6 +89,33 @@ func TestLoadProductionWordsCombinesAndDeduplicatesCorpora(t *testing.T) {
 	}
 }
 
+func TestCommittedRawWikidataCorpusIsNormalizedAndUnique(t *testing.T) {
+	words, err := LoadWordsFromFile("corpora/wikidata_company_brand_raw.txt")
+	if err != nil {
+		t.Fatalf("LoadWordsFromFile() error = %v", err)
+	}
+	if len(words) < 5000 {
+		t.Fatalf("raw company/brand corpus has %d words, want at least 5000", len(words))
+	}
+
+	previous := ""
+	for _, word := range words {
+		if len(word) < 2 || len(word) > 12 {
+			t.Errorf("raw word %q has unsupported length", word)
+		}
+		for i := 0; i < len(word); i++ {
+			if word[i] < 'a' || word[i] > 'z' {
+				t.Errorf("raw word %q is not normalized lowercase ASCII", word)
+				break
+			}
+		}
+		if previous != "" && word <= previous {
+			t.Errorf("raw corpus is not sorted and unique at %q after %q", word, previous)
+		}
+		previous = word
+	}
+}
+
 func TestCommittedWikidataCorpusIsNormalizedAndUnique(t *testing.T) {
 	words, err := LoadWordsFromFile("corpora/wikidata_company_brand.txt")
 	if err != nil {
