@@ -8,7 +8,7 @@ The current implementation uses three layers:
 
 1. Template-based random name construction (using a vowel/consonant rhythm)
 2. Rule-based filtering and penalties
-3. Corpus-trained bigram scoring
+3. Corpus-trained interpolated trigram scoring with bigram backoff
 
 ## Install
 ```bash
@@ -70,7 +70,7 @@ At a high level, the CLI loops until it has produced the requested number of nam
 2. Set a baseline score and threshold for an acceptable name.
 3. Apply hard rules (rules that reject the candidate immediately on failure)
 4. Apply soft rules (rules that subtract penalties from the score)
-5. Apply a score adjustment using a bigram probability model trained on existing names
+5. Apply a score adjustment using the production interpolated trigram model trained on human and company/brand names
 6. Accept the candidate if final score is above threshold
 
 Accepted names are unique within a run; repeated candidates are rejected and count against the attempt limit.
@@ -130,9 +130,9 @@ Soft rules
 - repeated identical vowel pairs
 - doubled consonant endings
 
-## Bigram model
+## Character n-gram model
 
-The bigram model scores how plausible adjacent letter transitions are, based on a corpus.
+Production scoring uses a character trigram model with smoothed bigram backoff. The extra context helps distinguish sequences with the same adjacent letters, while bigram backoff stabilizes sparse contexts. A standalone bigram model remains as the evaluation baseline.
 
 - [Default corpus file](./internal/data/names.txt)
 - [External company/brand corpus](./internal/data/corpora/wikidata_company_brand.txt)
@@ -140,11 +140,11 @@ The bigram model scores how plausible adjacent letter transitions are, based on 
 - [Loader](./internal/data/corpus.go)
 - [Model](./internal/gen/model.go)
 
-The Wikidata corpus is a separate evaluation dataset; it does not change the embedded production corpus.
+Both corpus files are embedded; the production loader combines and deduplicates them while preserving each source file and its provenance.
 
-### BigramModel fields
+### Bigram backoff fields
 
-`BigramModel` stores:
+`BigramModel` stores the fallback transition statistics:
 
 - `Count map[[2]byte]int`
   - counts of each transition, e.g. (`t`,`h`) -> 1842
@@ -161,13 +161,13 @@ Constants:
 
 ### Training
 
-For each corpus word:
+For each corpus word, the bigram backoff model:
 
-1. normalize to lowercase `a-z`
-2. add boundaries: `^word$`
-3. for each adjacent pair `(a,b)`:
-   - `Count[(a,b)]++`
-   - `Row[a]++`
+1. normalizes to lowercase `a-z`
+2. adds boundaries: `^word$`
+3. counts each adjacent pair `(a,b)` in `Count[(a,b)]` and increments `Row[a]`
+
+The production trigram model also prepends a second start token, then counts each next character given the previous two characters. It interpolates that smoothed estimate with the bigram backoff; the backoff strength is selected using the validation split by `cmd/model-eval`.
 
 ### Laplace smoothing
 
@@ -187,7 +187,7 @@ Using logs converts products into sums:
 
 `log P(word) = sum(log P(next|current))`
 
-The model uses **average** log probability so scores are comparable across lengths.
+The models use **average** log probability so scores are comparable across lengths.
 
 The score adjustment is a bounded, piecewise-linear mapping of that average, rather than one fixed adjustment per band. It interpolates between these anchors:
 
@@ -198,9 +198,11 @@ The score adjustment is a bounded, piecewise-linear mapping of that average, rat
 
 Values beyond the anchors are clamped. Probability bands remain as coarse diagnostic labels; the actual adjustment is stored with the band and uses the continuous score.
 
-An experimental `InterpolatedTrigramModel` is also evaluated against the bigram baseline on a deterministic held-out corpus split. It interpolates trigram probabilities with bigram backoff according to how often each two-character context appeared in training. It is not used for production scoring unless it improves held-out separation.
+Production uses one `InterpolatedTrigramModel` to score names. It estimates `P(c|ab)` with Laplace smoothing and interpolates it with bigram backoff `P(c|b)`. The trigram weight is `count(ab) / (count(ab) + backoffStrength)`, so sparse contexts rely more on bigrams. Production uses backoff strength 20, selected on validation data from the combined corpus. The standalone bigram model is retained only as the backoff component and evaluation baseline, not as a second selectable production scorer.
 
-### End-to-end example
+### Bigram baseline example
+
+This calculation illustrates the bigram fallback probabilities used by the production model.
 
 Corpus words:
 

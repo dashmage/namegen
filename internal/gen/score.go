@@ -10,7 +10,7 @@ import (
 
 var (
 	defaultModelOnce sync.Once
-	defaultModel     *BigramModel
+	defaultModel     *InterpolatedTrigramModel
 	defaultModelErr  error
 )
 
@@ -36,16 +36,17 @@ type Evaluation struct {
 	AvgLogProb       float64
 }
 
-// loadDefaultModel trains a reusable bigram model from the embedded corpus.
-func loadDefaultModel() (*BigramModel, error) {
+// loadDefaultModel trains the production interpolated trigram model from the
+// combined embedded name and company/brand corpora.
+func loadDefaultModel() (*InterpolatedTrigramModel, error) {
 	defaultModelOnce.Do(func() {
-		words, err := data.LoadWords()
+		words, err := data.LoadProductionWords()
 		if err != nil {
 			defaultModelErr = err
 			return
 		}
 
-		m := NewBigramModel(defaults.BaseAlpha)
+		m := NewInterpolatedTrigramModel(defaults.BaseAlpha)
 		m.Train(words)
 		defaultModel = m
 	})

@@ -9,7 +9,7 @@ const (
 
 	BaseScore              = 100
 	BaseAlpha              = 0.5
-	TrigramBackoffStrength = 5.0
+	TrigramBackoffStrength = 20.0
 
 	Vowels     = "aeiouy"
 	Consonants = "bcdfghjklmnpqrstvwxz"

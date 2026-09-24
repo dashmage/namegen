@@ -6,8 +6,8 @@ import (
 	"github.com/dashmage/namegen/internal/defaults"
 )
 
-// ProbabilityBand labels an average bigram log-probability range. Value is the
-// rounded score adjustment computed from the continuous probability score.
+// ProbabilityBand labels an average character n-gram log-probability range.
+// Value is the rounded score adjustment computed from the continuous score.
 type ProbabilityBand struct {
 	Name  string
 	Value int
@@ -178,6 +178,15 @@ func (m *InterpolatedTrigramModel) AvgLogProb(word string) float64 {
 	steps++
 
 	return sum / float64(steps)
+}
+
+// ScoreAdjustment maps the interpolated trigram likelihood into the configured
+// score range while retaining probability-band diagnostics.
+func (m *InterpolatedTrigramModel) ScoreAdjustment(word string) (band ProbabilityBand, avgLogProb float64) {
+	avgLogProb = m.AvgLogProb(word)
+	band = probabilityBandFor(avgLogProb)
+	band.Value = scoreAdjustmentFor(avgLogProb)
+	return band, avgLogProb
 }
 
 // AvgLogProb returns the mean bigram log-probability of transitions in a word.

@@ -66,6 +66,29 @@ func TestFetchWikidataCompanyBrandNames(t *testing.T) {
 	}
 }
 
+func TestLoadProductionWordsCombinesAndDeduplicatesCorpora(t *testing.T) {
+	legacy, err := LoadWords()
+	if err != nil {
+		t.Fatalf("LoadWords() error = %v", err)
+	}
+	production, err := LoadProductionWords()
+	if err != nil {
+		t.Fatalf("LoadProductionWords() error = %v", err)
+	}
+	if len(production) <= len(legacy)+3000 {
+		t.Fatalf("production corpus size = %d, want legacy %d plus company/brand names", len(production), len(legacy))
+	}
+
+	seen := make(map[string]struct{}, len(production))
+	for _, word := range production {
+		key := strings.ToLower(word)
+		if _, duplicate := seen[key]; duplicate {
+			t.Errorf("duplicate production corpus word %q", word)
+		}
+		seen[key] = struct{}{}
+	}
+}
+
 func TestCommittedWikidataCorpusIsNormalizedAndUnique(t *testing.T) {
 	words, err := LoadWordsFromFile("corpora/wikidata_company_brand.txt")
 	if err != nil {
