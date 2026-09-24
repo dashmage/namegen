@@ -3,6 +3,8 @@ package data
 import (
 	"bufio"
 	"embed"
+	"io"
+	"os"
 	"strings"
 )
 
@@ -19,8 +21,23 @@ func LoadWords() ([]string, error) {
 	}
 	defer f.Close()
 
+	return scanWords(f)
+}
+
+// LoadWordsFromFile loads corpus entries from an external text file. Blank
+// lines and comments are ignored, matching the embedded corpus format.
+func LoadWordsFromFile(path string) ([]string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return scanWords(f)
+}
+
+func scanWords(reader io.Reader) ([]string, error) {
 	words := make([]string, 0, 1024)
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
@@ -28,10 +45,8 @@ func LoadWords() ([]string, error) {
 		}
 		words = append(words, line)
 	}
-
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
-
 	return words, nil
 }

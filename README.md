@@ -133,9 +133,13 @@ Soft rules
 
 The bigram model scores how plausible adjacent letter transitions are, based on a corpus.
 
-- [Corpus file](./internal/data/names.txt)
+- [Default corpus file](./internal/data/names.txt)
+- [External company/brand corpus](./internal/data/corpora/wikidata_company_brand.txt)
+- [Corpus preparation command](./cmd/fetch-corpus/main.go)
 - [Loader](./internal/data/corpus.go)
 - [Model](./internal/gen/model.go)
+
+The Wikidata corpus is a separate evaluation dataset; it does not change the embedded production corpus.
 
 ### BigramModel fields
 
