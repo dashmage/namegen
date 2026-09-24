@@ -168,7 +168,7 @@ For each corpus word, the bigram backoff model:
 2. adds boundaries: `^word$`
 3. counts each adjacent pair `(a,b)` in `Count[(a,b)]` and increments `Row[a]`
 
-The production trigram model also prepends a second start token, then counts each next character given the previous two characters. It interpolates that smoothed estimate with the bigram backoff; the backoff strength is selected using the validation split by `cmd/model-eval`.
+The production trigram model also prepends a second start token, then counts each next character given the previous two characters. It interpolates that smoothed estimate with the bigram backoff using a configured backoff strength of 20.
 
 ### Laplace smoothing
 
@@ -199,9 +199,9 @@ The score adjustment is a bounded, piecewise-linear mapping of that average, rat
 
 Values beyond the anchors are clamped. Probability bands remain as coarse diagnostic labels; the actual adjustment is stored with the band and uses the continuous score.
 
-Production uses one `InterpolatedTrigramModel` to score names. It estimates `P(c|ab)` with Laplace smoothing and interpolates it with bigram backoff `P(c|b)`. The trigram weight is `count(ab) / (count(ab) + backoffStrength)`, so sparse contexts rely more on bigrams. Production uses backoff strength 20, selected on validation data from the combined corpus. The standalone bigram model is retained only as the backoff component and evaluation baseline, not as a second selectable production scorer.
+Production uses one `InterpolatedTrigramModel` to score names. It estimates `P(c|ab)` with Laplace smoothing and interpolates it with bigram backoff `P(c|b)`. The trigram weight is `count(ab) / (count(ab) + backoffStrength)`, so sparse contexts rely more on bigrams. The bigram distribution is an internal fallback; generation uses a single scoring model.
 
-### Bigram baseline example
+### Bigram backoff example
 
 This calculation illustrates the bigram fallback probabilities used by the production model.
 
@@ -252,30 +252,3 @@ Scoring flow example:
 3. probability band for `-1.719` gives a small bonus
 4. final score stays above acceptance threshold
 5. candidate accepted as a name
-
-## Comparing model variants
-
-Use the separate Wikidata company/brand corpus to evaluate scoring changes without changing the embedded production corpus:
-
-```sh
-go run ./cmd/model-eval \
-  --corpus internal/data/corpora/wikidata_company_brand.txt \
-  --seed=42 \
-  --backoffs=0,1,5,10,20,50
-```
-
-The command creates a deterministic 70/15/15 train/validation/test split. It chooses trigram backoff strength using validation likelihood, then reports untouched-test cross-entropy, held-out-versus-generated score gaps, and pairwise ranking accuracy. Generated comparison names are length-matched to test names and must pass the generator's hard rules. Try multiple `--seed` values to check split sensitivity.
-
-Optional human ratings can be supplied as CSV:
-
-```csv
-name,rating
-lora,5
-mira,3
-```
-
-```sh
-go run ./cmd/model-eval --corpus internal/data/corpora/wikidata_company_brand.txt --ratings ratings.csv
-```
-
-Rated names are excluded from the corpus split to avoid exact-name leakage; the report includes Spearman rank correlation between model likelihood and ratings. The evaluation command does not change production scoring.
