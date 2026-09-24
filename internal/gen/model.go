@@ -51,14 +51,25 @@ func NewBigramModel(alpha float64) *BigramModel {
 	}
 }
 
-// NewInterpolatedTrigramModel creates a trigram model with bigram backoff.
+// NewInterpolatedTrigramModel creates a trigram model with the default bigram
+// backoff strength.
 func NewInterpolatedTrigramModel(alpha float64) *InterpolatedTrigramModel {
+	return NewInterpolatedTrigramModelWithBackoff(alpha, defaults.TrigramBackoffStrength)
+}
+
+// NewInterpolatedTrigramModelWithBackoff creates a trigram model with a custom
+// non-negative backoff strength. Zero uses trigram estimates whenever a context
+// has been observed and still falls back to bigrams for unseen contexts.
+func NewInterpolatedTrigramModelWithBackoff(alpha, backoffStrength float64) *InterpolatedTrigramModel {
+	if backoffStrength < 0 {
+		backoffStrength = defaults.TrigramBackoffStrength
+	}
 	bigram := NewBigramModel(alpha)
 	return &InterpolatedTrigramModel{
 		bigram:           bigram,
 		trigramCounts:    make(map[[3]byte]int),
 		trigramRowTotals: make(map[[2]byte]int),
-		backoffStrength:  defaults.TrigramBackoffStrength,
+		backoffStrength:  backoffStrength,
 	}
 }
 
@@ -132,7 +143,14 @@ func (m *InterpolatedTrigramModel) InterpolatedLogProb(a, b, c byte) float64 {
 	trigramProbability := trigramNumerator / trigramDenominator
 	bigramProbability := math.Exp(m.bigram.LogProb(b, c))
 
-	trigramWeight := float64(contextCount) / (float64(contextCount) + m.backoffStrength)
+	trigramWeight := 0.0
+	if contextCount > 0 {
+		if m.backoffStrength == 0 {
+			trigramWeight = 1
+		} else {
+			trigramWeight = float64(contextCount) / (float64(contextCount) + m.backoffStrength)
+		}
+	}
 	probability := trigramWeight*trigramProbability + (1-trigramWeight)*bigramProbability
 	return math.Log(probability)
 }

@@ -5,6 +5,6 @@
 - **License:** Wikidata data is available under CC0 1.0 Universal.
 - **Fetch:** `go run ./cmd/fetch-corpus --limit=10000`
 - **Preparation:** labels are lowercased, common trailing legal designators are removed, punctuation/non-ASCII bytes are discarded, normalized duplicates are removed, and only names of 2-12 ASCII letters that pass every generator hard rule are retained.
-- **Usage:** this file is intentionally not embedded in the production model. Use it as a separate target-domain corpus when evaluating model changes. The checked-in file preserves the exact retrieved sample; rerunning the query can produce a different sample as Wikidata changes.
+- **Usage:** this file is intentionally not embedded in the production model. Use it as a separate target-domain corpus when evaluating model changes: `go run ./cmd/model-eval --corpus internal/data/corpora/wikidata_company_brand.txt`. The checked-in file preserves the exact retrieved sample; rerunning the query can produce a different sample as Wikidata changes.
 
 The importer uses direct instance types rather than recursively including subclasses. This keeps the query bounded and fast enough for the public Wikidata Query Service.

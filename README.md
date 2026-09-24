@@ -248,3 +248,30 @@ Scoring flow example:
 3. probability band for `-1.719` gives a small bonus
 4. final score stays above acceptance threshold
 5. candidate accepted as a name
+
+## Comparing model variants
+
+Use the separate Wikidata company/brand corpus to evaluate scoring changes without changing the embedded production corpus:
+
+```sh
+go run ./cmd/model-eval \
+  --corpus internal/data/corpora/wikidata_company_brand.txt \
+  --seed=42 \
+  --backoffs=0,1,5,10,20,50
+```
+
+The command creates a deterministic 70/15/15 train/validation/test split. It chooses trigram backoff strength using validation likelihood, then reports untouched-test cross-entropy, held-out-versus-generated score gaps, and pairwise ranking accuracy. Generated comparison names are length-matched to test names and must pass the generator's hard rules. Try multiple `--seed` values to check split sensitivity.
+
+Optional human ratings can be supplied as CSV:
+
+```csv
+name,rating
+lora,5
+mira,3
+```
+
+```sh
+go run ./cmd/model-eval --corpus internal/data/corpora/wikidata_company_brand.txt --ratings ratings.csv
+```
+
+Rated names are excluded from the corpus split to avoid exact-name leakage; the report includes Spearman rank correlation between model likelihood and ratings. The evaluation command does not change production scoring.
