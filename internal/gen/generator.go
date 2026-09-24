@@ -28,6 +28,8 @@ var rhythmTemplates = []struct {
 
 var rng = rand.New(rand.NewSource(time.Now().UnixNano()))
 
+const initialNameCapacity = 64
+
 // SetSeed sets the generator RNG to a deterministic seed.
 func SetSeed(seed int64) {
 	rng.Seed(seed)
@@ -40,34 +42,33 @@ func RandomName(length int) string {
 	}
 
 	pattern := buildRhythmPattern(length)
-	var res strings.Builder
-	res.Grow(len(pattern))
-	for i := 0; i < len(pattern); i++ {
+	for i := range pattern {
 		switch pattern[i] {
 		case 'V':
-			res.WriteByte(randomVowel())
+			pattern[i] = randomVowel()
 		default:
-			res.WriteByte(randomConsonant())
+			pattern[i] = randomConsonant()
 		}
 	}
-	return res.String()
+	return string(pattern)
 }
 
 // Generate creates pronounceable name candidates and populates results.
 func Generate(opt Options) Result {
 	result := Result{
 		RequestedCount: opt.Count,
-		Names:          make([]AcceptedName, 0, opt.Count),
+		Names:          make([]AcceptedName, 0),
 		Threshold:      opt.Threshold,
 		RuleHits:       NewRuleHits(),
 	}
 	if opt.TuneEnabled {
-		result.AttemptLog = make([]Attempt, 0, opt.MaxAttempts)
+		result.AttemptLog = make([]Attempt, 0)
 	}
 	if opt.Count <= 0 || opt.MaxAttempts <= 0 || opt.Length <= 0 {
 		return result
 	}
 
+	result.Names = make([]AcceptedName, 0, min(opt.Count, opt.MaxAttempts, initialNameCapacity))
 	seenNames := make(map[string]struct{})
 	for len(result.Names) < opt.Count {
 		if result.Attempts >= opt.MaxAttempts {
@@ -137,31 +138,29 @@ func isVowel(ch byte) bool {
 }
 
 // buildRhythmPattern assembles a weighted CV pattern to the requested length.
-func buildRhythmPattern(length int) string {
-	var pattern strings.Builder
-	pattern.Grow(length)
+func buildRhythmPattern(length int) []byte {
+	pattern := make([]byte, 0, length)
 
-	for pattern.Len() < length {
+	for len(pattern) < length {
 		next := weightedTemplate()
-		remaining := length - pattern.Len()
+		remaining := length - len(pattern)
 		if len(next) > remaining {
 			next = next[:remaining]
 		}
-		pattern.WriteString(next)
+		pattern = append(pattern, next...)
 	}
 
-	out := []byte(pattern.String())
-	for i := 1; i < len(out)-1; i++ {
-		if out[i-1] == 'V' && out[i] == 'V' && out[i+1] == 'V' {
-			out[i] = 'C'
+	for i := 1; i < len(pattern)-1; i++ {
+		if pattern[i-1] == 'V' && pattern[i] == 'V' && pattern[i+1] == 'V' {
+			pattern[i] = 'C'
 		}
 	}
 
-	if len(out) > 0 && out[len(out)-1] == 'V' && rng.Intn(100) < defaults.FinalConsonantBiasPercent {
-		out[len(out)-1] = 'C'
+	if len(pattern) > 0 && pattern[len(pattern)-1] == 'V' && rng.Intn(100) < defaults.FinalConsonantBiasPercent {
+		pattern[len(pattern)-1] = 'C'
 	}
 
-	return string(out)
+	return pattern
 }
 
 // weightedTemplate chooses a rhythm template using configured weights.

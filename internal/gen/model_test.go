@@ -45,6 +45,16 @@ func TestScoreAdjustmentInterpolatesAndClamps(t *testing.T) {
 	}
 }
 
+func TestAvgLogProbNormalizesWithoutChangingTransitions(t *testing.T) {
+	model := NewBigramModel(defaults.BaseAlpha)
+	model.Train([]string{"lora"})
+
+	want := model.AvgLogProb("lora")
+	if got := model.AvgLogProb("Lo-ra_123!"); got != want {
+		t.Fatalf("AvgLogProb(normalized variant) = %f, want %f", got, want)
+	}
+}
+
 func TestBigramModelPrefersSeenTransitions(t *testing.T) {
 	model := NewBigramModel(defaults.BaseAlpha)
 	model.Train([]string{"lena", "lora", "nora", "mila", "mira", "sora"})

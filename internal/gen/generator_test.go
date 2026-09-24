@@ -2,6 +2,32 @@ package gen
 
 import "testing"
 
+func TestGenerateBoundsInitialResultCapacity(t *testing.T) {
+	result := Generate(Options{
+		MaxAttempts: 1,
+		Count:       1 << 30,
+		Length:      5,
+		Threshold:   -100,
+	})
+
+	if result.Attempts != 1 {
+		t.Fatalf("Attempts = %d, want 1", result.Attempts)
+	}
+}
+
+func TestGenerateValidatesBeforeAllocatingAttemptLog(t *testing.T) {
+	result := Generate(Options{
+		MaxAttempts: 1 << 30,
+		Count:       0,
+		Length:      5,
+		TuneEnabled: true,
+	})
+
+	if result.Attempts != 0 || len(result.AttemptLog) != 0 {
+		t.Fatalf("invalid run result = attempts %d, log length %d; want 0, 0", result.Attempts, len(result.AttemptLog))
+	}
+}
+
 func TestGenerateReturnsUniqueNames(t *testing.T) {
 	SetSeed(42)
 	result := Generate(Options{
