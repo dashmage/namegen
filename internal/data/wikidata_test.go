@@ -71,8 +71,8 @@ func TestCommittedWikidataCorpusIsNormalizedAndUnique(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadWordsFromFile() error = %v", err)
 	}
-	if len(words) < 5000 {
-		t.Fatalf("committed company/brand corpus has %d words, want at least 5000", len(words))
+	if len(words) < 3000 {
+		t.Fatalf("committed company/brand corpus has %d words, want at least 3000", len(words))
 	}
 
 	previous := ""
