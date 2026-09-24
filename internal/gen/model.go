@@ -28,6 +28,15 @@ type BigramModel struct {
 	Alpha        float64         // laplace smoothing factor
 }
 
+// InterpolatedTrigramModel combines smoothed trigram probabilities with bigram
+// backoff for sparse two-character contexts.
+type InterpolatedTrigramModel struct {
+	bigram           *BigramModel
+	trigramCounts    map[[3]byte]int
+	trigramRowTotals map[[2]byte]int
+	backoffStrength  float64
+}
+
 // NewBigramModel creates a model with Laplace smoothing parameter alpha.
 // If alpha is <= 0, it defaults to 0.5.
 func NewBigramModel(alpha float64) *BigramModel {
@@ -39,6 +48,17 @@ func NewBigramModel(alpha float64) *BigramModel {
 		BigramCounts: make(map[[2]byte]int),
 		RowTotals:    make(map[byte]int),
 		Alpha:        alpha,
+	}
+}
+
+// NewInterpolatedTrigramModel creates a trigram model with bigram backoff.
+func NewInterpolatedTrigramModel(alpha float64) *InterpolatedTrigramModel {
+	bigram := NewBigramModel(alpha)
+	return &InterpolatedTrigramModel{
+		bigram:           bigram,
+		trigramCounts:    make(map[[3]byte]int),
+		trigramRowTotals: make(map[[2]byte]int),
+		backoffStrength:  defaults.TrigramBackoffStrength,
 	}
 }
 
@@ -73,8 +93,77 @@ func (m *BigramModel) LogProb(a, b byte) float64 {
 	return math.Log(numerator / denominator)
 }
 
-// AvgLogProb returns the mean log-probability of transitions in a word.
-// It includes start and end boundary transitions.
+// Train updates trigram counts while training its bigram backoff model.
+func (m *InterpolatedTrigramModel) Train(words []string) {
+	m.bigram.Train(words)
+	for _, word := range words {
+		clean := normalizeWord(word)
+		if clean == "" {
+			continue
+		}
+
+		buf := make([]byte, 0, len(clean)+2)
+		buf = append(buf, defaults.StartToken)
+		buf = append(buf, clean...)
+		buf = append(buf, defaults.EndToken)
+
+		previousPrevious := defaults.StartToken
+		for i := 0; i < len(buf)-1; i++ {
+			previous := buf[i]
+			next := buf[i+1]
+			context := [2]byte{previousPrevious, previous}
+			trigram := [3]byte{previousPrevious, previous, next}
+			m.trigramCounts[trigram]++
+			m.trigramRowTotals[context]++
+			previousPrevious = previous
+		}
+	}
+}
+
+// InterpolatedLogProb returns a smoothed trigram probability backed off to the
+// bigram model when the two-character context is sparse.
+func (m *InterpolatedTrigramModel) InterpolatedLogProb(a, b, c byte) float64 {
+	context := [2]byte{a, b}
+	key := [3]byte{a, b, c}
+	contextCount := m.trigramRowTotals[context]
+
+	trigramNumerator := float64(m.trigramCounts[key]) + m.bigram.Alpha
+	trigramDenominator := float64(contextCount) + m.bigram.Alpha*float64(defaults.VocabSize)
+	trigramProbability := trigramNumerator / trigramDenominator
+	bigramProbability := math.Exp(m.bigram.LogProb(b, c))
+
+	trigramWeight := float64(contextCount) / (float64(contextCount) + m.backoffStrength)
+	probability := trigramWeight*trigramProbability + (1-trigramWeight)*bigramProbability
+	return math.Log(probability)
+}
+
+// AvgLogProb returns mean interpolated trigram log-probability, including
+// start and end boundary transitions.
+func (m *InterpolatedTrigramModel) AvgLogProb(word string) float64 {
+	clean := normalizeWord(word)
+	if clean == "" {
+		return math.Inf(-1)
+	}
+
+	previousPrevious := defaults.StartToken
+	previous := defaults.StartToken
+	sum := 0.0
+	steps := 0
+	for i := 0; i < len(clean); i++ {
+		next := clean[i]
+		sum += m.InterpolatedLogProb(previousPrevious, previous, next)
+		previousPrevious = previous
+		previous = next
+		steps++
+	}
+	sum += m.InterpolatedLogProb(previousPrevious, previous, defaults.EndToken)
+	steps++
+
+	return sum / float64(steps)
+}
+
+// AvgLogProb returns the mean bigram log-probability of transitions in a word.
+// It includes start and end boundary transitions and is retained as the baseline.
 func (m *BigramModel) AvgLogProb(word string) float64 {
 	clean := normalizeWord(word)
 	if clean == "" {

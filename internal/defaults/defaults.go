@@ -7,8 +7,9 @@ const (
 	Count       = 10
 	Length      = 5
 
-	BaseScore = 100
-	BaseAlpha = 0.5
+	BaseScore              = 100
+	BaseAlpha              = 0.5
+	TrigramBackoffStrength = 5.0
 
 	Vowels     = "aeiouy"
 	Consonants = "bcdfghjklmnpqrstvwxz"

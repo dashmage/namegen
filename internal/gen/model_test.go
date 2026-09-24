@@ -2,6 +2,7 @@ package gen
 
 import (
 	"hash/crc32"
+	"math"
 	"testing"
 
 	"github.com/dashmage/namegen/internal/data"
@@ -47,6 +48,29 @@ func TestScoreAdjustmentInterpolatesAndClamps(t *testing.T) {
 	}
 }
 
+func TestInterpolatedTrigramBacksOffForUnseenContext(t *testing.T) {
+	model := NewInterpolatedTrigramModel(defaults.BaseAlpha)
+	model.Train([]string{"lora", "lena"})
+
+	got := model.InterpolatedLogProb('x', 'z', 'q')
+	want := model.bigram.LogProb('z', 'q')
+	if math.Abs(got-want) > 1e-12 {
+		t.Fatalf("unseen-context interpolated log probability = %.12f, want bigram backoff %.12f", got, want)
+	}
+}
+
+func TestInterpolatedTrigramUsesTwoCharacterContext(t *testing.T) {
+	words := []string{"shana", "shana", "shana", "shana", "shana", "thena", "thena", "thena", "thena", "thena"}
+	model := NewInterpolatedTrigramModel(defaults.BaseAlpha)
+	model.Train(words)
+
+	trigramProbability := math.Exp(model.InterpolatedLogProb('s', 'h', 'a'))
+	bigramProbability := math.Exp(model.bigram.LogProb('h', 'a'))
+	if trigramProbability <= bigramProbability {
+		t.Fatalf("P(a|sh) = %.4f, P(a|h) = %.4f; want context-specific probability to be higher", trigramProbability, bigramProbability)
+	}
+}
+
 func TestAvgLogProbNormalizesWithoutChangingTransitions(t *testing.T) {
 	model := NewBigramModel(defaults.BaseAlpha)
 	model.Train([]string{"lora"})
@@ -57,7 +81,7 @@ func TestAvgLogProbNormalizesWithoutChangingTransitions(t *testing.T) {
 	}
 }
 
-func TestDefaultBigramModelScoresHeldOutCorpusAboveGeneratedNames(t *testing.T) {
+func TestBigramAndInterpolatedTrigramHeldOutComparison(t *testing.T) {
 	words, err := data.LoadWords()
 	if err != nil {
 		t.Fatalf("LoadWords() error = %v", err)
@@ -79,19 +103,35 @@ func TestDefaultBigramModelScoresHeldOutCorpusAboveGeneratedNames(t *testing.T) 
 
 	model := NewBigramModel(defaults.BaseAlpha)
 	model.Train(train)
+	trigramModel := NewInterpolatedTrigramModel(defaults.BaseAlpha)
+	trigramModel.Train(train)
 
 	SetSeed(42)
-	heldoutTotal := 0.0
-	generatedTotal := 0.0
+	bigramHeldoutTotal := 0.0
+	bigramGeneratedTotal := 0.0
+	trigramHeldoutTotal := 0.0
+	trigramGeneratedTotal := 0.0
 	for _, word := range heldout {
-		heldoutTotal += model.AvgLogProb(word)
-		generatedTotal += model.AvgLogProb(RandomName(len(word)))
+		generated := RandomName(len(word))
+		bigramHeldoutTotal += model.AvgLogProb(word)
+		bigramGeneratedTotal += model.AvgLogProb(generated)
+		trigramHeldoutTotal += trigramModel.AvgLogProb(word)
+		trigramGeneratedTotal += trigramModel.AvgLogProb(generated)
 	}
 
-	heldoutMean := heldoutTotal / float64(len(heldout))
-	generatedMean := generatedTotal / float64(len(heldout))
-	if heldoutMean <= generatedMean {
-		t.Fatalf("held-out corpus mean log-probability = %.4f, generated-name mean = %.4f; want held-out names to score higher", heldoutMean, generatedMean)
+	bigramHeldoutMean := bigramHeldoutTotal / float64(len(heldout))
+	bigramGeneratedMean := bigramGeneratedTotal / float64(len(heldout))
+	trigramHeldoutMean := trigramHeldoutTotal / float64(len(heldout))
+	trigramGeneratedMean := trigramGeneratedTotal / float64(len(heldout))
+	bigramGap := bigramHeldoutMean - bigramGeneratedMean
+	trigramGap := trigramHeldoutMean - trigramGeneratedMean
+	t.Logf("held-out vs generated mean log-probability gap: bigram=%.4f interpolated-trigram=%.4f", bigramGap, trigramGap)
+
+	if bigramGap <= 0 {
+		t.Fatalf("bigram held-out mean = %.4f, generated-name mean = %.4f; want held-out names to score higher", bigramHeldoutMean, bigramGeneratedMean)
+	}
+	if trigramGap <= 0 {
+		t.Fatalf("interpolated trigram held-out mean = %.4f, generated-name mean = %.4f; want held-out names to score higher", trigramHeldoutMean, trigramGeneratedMean)
 	}
 }
 

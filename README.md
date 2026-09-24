@@ -193,6 +193,8 @@ The score adjustment is a bounded, piecewise-linear mapping of that average, rat
 
 Values beyond the anchors are clamped. Probability bands remain as coarse diagnostic labels; the actual adjustment is stored with the band and uses the continuous score.
 
+An experimental `InterpolatedTrigramModel` is also evaluated against the bigram baseline on a deterministic held-out corpus split. It interpolates trigram probabilities with bigram backoff according to how often each two-character context appeared in training. It is not used for production scoring unless it improves held-out separation.
+
 ### End-to-end example
 
 Corpus words:
