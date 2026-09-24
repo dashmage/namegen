@@ -13,6 +13,7 @@ type Options struct {
 	MaxAttempts int
 	Count       int
 	Length      int
+	Substring   string
 	Threshold   int
 	TuneEnabled bool
 }
@@ -51,8 +52,35 @@ func RandomName(length int) string {
 	rngMu.Lock()
 	defer rngMu.Unlock()
 
+	return fillRhythmPattern(buildRhythmPattern(length), 0, "")
+}
+
+// RandomNameContaining generates a random name containing substring, with at
+// least one generated character on each side. Matching is case-insensitive.
+func RandomNameContaining(length int, substring string) string {
+	if substring == "" {
+		return RandomName(length)
+	}
+	if !validSubstringOptions(length, substring) {
+		return ""
+	}
+	substring = strings.ToLower(substring)
+
+	rngMu.Lock()
+	defer rngMu.Unlock()
+
 	pattern := buildRhythmPattern(length)
+	start := 1 + rng.Intn(length-len(substring)-1)
+	return fillRhythmPattern(pattern, start, substring)
+}
+
+func fillRhythmPattern(pattern []byte, fixedStart int, fixed string) string {
+	fixedEnd := fixedStart + len(fixed)
+	copy(pattern[fixedStart:fixedEnd], fixed)
 	for i := range pattern {
+		if i >= fixedStart && i < fixedEnd {
+			continue
+		}
 		switch pattern[i] {
 		case 'V':
 			pattern[i] = randomVowel()
@@ -74,7 +102,7 @@ func Generate(opt Options) Result {
 	if opt.TuneEnabled {
 		result.AttemptLog = make([]Attempt, 0)
 	}
-	if opt.Count <= 0 || opt.MaxAttempts <= 0 || opt.Length <= 0 {
+	if opt.Count <= 0 || opt.MaxAttempts <= 0 || opt.Length <= 0 || !validSubstringOptions(opt.Length, opt.Substring) {
 		return result
 	}
 
@@ -85,7 +113,12 @@ func Generate(opt Options) Result {
 			break
 		}
 
-		candidate := RandomName(opt.Length)
+		candidate := ""
+		if opt.Substring == "" {
+			candidate = RandomName(opt.Length)
+		} else {
+			candidate = RandomNameContaining(opt.Length, opt.Substring)
+		}
 		evaluation := Evaluate(candidate, &result.RuleHits, opt.TuneEnabled)
 		result.Attempts++
 
@@ -140,6 +173,22 @@ func Generate(opt Options) Result {
 	}
 
 	return result
+}
+
+func validSubstringOptions(length int, substring string) bool {
+	if substring == "" {
+		return true
+	}
+	if length < len(substring)+2 {
+		return false
+	}
+	for i := 0; i < len(substring); i++ {
+		ch := substring[i]
+		if (ch < 'a' || ch > 'z') && (ch < 'A' || ch > 'Z') {
+			return false
+		}
+	}
+	return true
 }
 
 // isVowel reports whether ch exists in the configured vowel set.

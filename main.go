@@ -9,7 +9,7 @@ func main() {
 	config := cli.Parse()
 	gen.SetSeed(config.Seed)
 	if config.TuneEnabled {
-		cli.RunTuneSession(config.Length)
+		cli.RunTuneSession(config.Length, config.Substring)
 		return
 	}
 
@@ -17,6 +17,7 @@ func main() {
 		MaxAttempts: config.MaxAttempts,
 		Count:       config.Count,
 		Length:      config.Length,
+		Substring:   config.Substring,
 		Threshold:   config.Threshold,
 		TuneEnabled: config.TuneEnabled,
 	})

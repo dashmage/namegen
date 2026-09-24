@@ -58,7 +58,7 @@ const (
 )
 
 // RunTuneSession starts the interactive tuning loop.
-func RunTuneSession(length int) {
+func RunTuneSession(length int, substring string) {
 	reader := bufio.NewReader(os.Stdin)
 	observations := make([]tuneObservation, 0, 16)
 
@@ -67,7 +67,12 @@ func RunTuneSession(length int) {
 	fmt.Println("1=very bad 2=bad 3=ok 4=good 5=very good")
 
 	for {
-		name := gen.RandomName(length)
+		name := ""
+		if substring == "" {
+			name = gen.RandomName(length)
+		} else {
+			name = gen.RandomNameContaining(length, substring)
+		}
 		evaluation := gen.Evaluate(name, nil, true)
 
 		fmt.Println()

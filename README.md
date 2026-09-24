@@ -46,6 +46,9 @@ padai
 saire
 keipy
 jifat
+
+# require "ora" in every generated 5-letter name
+$ namegen --substring=ora --length=5
 ```
 
 Here's all the possible flags (see [internal/cli/config.go](./internal/cli/config.go)):
@@ -53,6 +56,7 @@ Here's all the possible flags (see [internal/cli/config.go](./internal/cli/confi
 - `--attempts` maximum total candidate attempts for the entire run
 - `--count` number of names to generate
 - `--length` generated name length
+- `--substring` required substring (must be paired with an explicit `--length` at least two characters longer)
 - `--seed` optional RNG seed for reproducible output
 - `--threshold` minimum acceptance score
 - `--debug` print scores and generation diagnostics
@@ -80,7 +84,7 @@ The core flow is implemented in:
 
 ## Template-based random name generation
 
-Instead of drawing each letter uniformly from `a-z`, name candidates are built from vowel/consonant patterns to create more natural rhythm.
+Instead of drawing each letter uniformly from `a-z`, name candidates are built from vowel/consonant patterns to create more natural rhythm. The optional `--substring` constraint reserves an internal span for the requested letters and fills the surrounding positions from the rhythm pattern.
 
 - `C` = consonant
 - `V` = vowel

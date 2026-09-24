@@ -1,9 +1,50 @@
 package gen
 
 import (
+	"strings"
 	"sync"
 	"testing"
 )
+
+func TestRandomNameContainingKeepsSubstringInternal(t *testing.T) {
+	SetSeed(42)
+	for range 50 {
+		name := RandomNameContaining(8, "AbC")
+		start := strings.Index(name, "abc")
+		if len(name) != 8 || start <= 0 || start+len("abc") >= len(name) {
+			t.Fatalf("RandomNameContaining(8, %q) = %q, want lowercase substring with a character on each side", "AbC", name)
+		}
+	}
+}
+
+func TestRandomNameContainingRejectsInvalidInput(t *testing.T) {
+	if got := RandomNameContaining(4, "abc"); got != "" {
+		t.Fatalf("RandomNameContaining with insufficient length = %q, want empty", got)
+	}
+	if got := RandomNameContaining(5, "a-b"); got != "" {
+		t.Fatalf("RandomNameContaining with punctuation = %q, want empty", got)
+	}
+}
+
+func TestGenerateIncludesRequiredSubstring(t *testing.T) {
+	SetSeed(42)
+	result := Generate(Options{
+		MaxAttempts: 1000,
+		Count:       3,
+		Length:      5,
+		Substring:   "ora",
+		Threshold:   -100,
+	})
+
+	if len(result.Names) != 3 {
+		t.Fatalf("generated names = %d, want 3; attempts = %d", len(result.Names), result.Attempts)
+	}
+	for _, name := range result.Names {
+		if len(name.Name) != 5 || !strings.Contains(name.Name, "ora") {
+			t.Errorf("generated name %q does not satisfy length and substring constraints", name.Name)
+		}
+	}
+}
 
 func TestRandomNameAndSetSeedAreSafeConcurrently(t *testing.T) {
 	var wait sync.WaitGroup
