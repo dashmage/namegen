@@ -2,6 +2,8 @@ package gen
 
 import (
 	"testing"
+
+	"github.com/dashmage/namegen/internal/defaults"
 )
 
 func TestEvaluateHardRuleShortCircuitsScoring(t *testing.T) {
@@ -23,6 +25,18 @@ func TestEvaluateHardRuleShortCircuitsScoring(t *testing.T) {
 	}
 	if hits.Hard["three_consecutive_consonants"] != 1 {
 		t.Fatalf("hard hit count = %d, want 1", hits.Hard["three_consecutive_consonants"])
+	}
+}
+
+func TestConsonantPoolMatchesVowelClassifier(t *testing.T) {
+	for i := 0; i < len(defaults.Consonants); i++ {
+		if isVowel(defaults.Consonants[i]) {
+			t.Errorf("consonant pool contains vowel %q", defaults.Consonants[i])
+		}
+	}
+
+	if !isVowel('y') {
+		t.Fatal("y should remain classified as a vowel")
 	}
 }
 

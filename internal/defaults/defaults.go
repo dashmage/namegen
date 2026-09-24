@@ -11,7 +11,7 @@ const (
 	BaseAlpha = 0.5
 
 	Vowels     = "aeiouy"
-	Consonants = "bcdfghjklmnpqrstvwxyz"
+	Consonants = "bcdfghjklmnpqrstvwxz"
 
 	FinalConsonantBiasPercent = 35
 
