@@ -30,6 +30,6 @@ const (
 
 	VeryLowProbPenalty = 30
 	LowProbPenalty     = 20
-	MidProbPenalty     = 10
+	MidProbPenalty     = 15
 	GoodProbBonus      = 5
 )

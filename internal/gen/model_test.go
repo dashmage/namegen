@@ -26,9 +26,9 @@ func TestScoreAdjustmentInterpolatesAndClamps(t *testing.T) {
 		{name: "very-low anchor", value: defaults.VeryLowProbCutoff, want: -defaults.VeryLowProbPenalty},
 		{name: "between very-low and low anchors", value: (defaults.VeryLowProbCutoff + defaults.LowProbCutoff) / 2, want: -25},
 		{name: "low anchor", value: defaults.LowProbCutoff, want: -defaults.LowProbPenalty},
-		{name: "between low and mid anchors", value: (defaults.LowProbCutoff + defaults.MidProbCutoff) / 2, want: -15},
+		{name: "between low and mid anchors", value: (defaults.LowProbCutoff + defaults.MidProbCutoff) / 2, want: -18},
 		{name: "mid anchor", value: defaults.MidProbCutoff, want: -defaults.MidProbPenalty},
-		{name: "between mid and bonus anchors", value: (defaults.MidProbCutoff + defaults.GoodProbBonusCutoff) / 2, want: -3},
+		{name: "between mid and bonus anchors", value: (defaults.MidProbCutoff + defaults.GoodProbBonusCutoff) / 2, want: -5},
 		{name: "bonus anchor", value: defaults.GoodProbBonusCutoff, want: defaults.GoodProbBonus},
 		{name: "above maximum", value: 0, want: defaults.GoodProbBonus},
 	}
