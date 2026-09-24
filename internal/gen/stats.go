@@ -9,6 +9,7 @@ type AcceptedName struct {
 
 // Result contains accepted names, aggregate counters, and optional candidate details.
 type Result struct {
+	RequestedCount   int
 	Names            []AcceptedName
 	AttemptLog       []Attempt
 	Attempts         int

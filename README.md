@@ -50,7 +50,7 @@ jifat
 
 Here's all the possible flags (see [internal/cli/config.go](./internal/cli/config.go)):
 
-- `--attempts` max random name generation attempts
+- `--attempts` maximum total candidate attempts for the entire run
 - `--count` number of names to generate
 - `--length` generated name length
 - `--seed` optional RNG seed for reproducible output

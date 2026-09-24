@@ -12,6 +12,10 @@ func TestGenerateReturnsUniqueNames(t *testing.T) {
 		TuneEnabled: true,
 	})
 
+	if result.RequestedCount != 10 {
+		t.Fatalf("RequestedCount = %d, want 10", result.RequestedCount)
+	}
+
 	seen := make(map[string]struct{}, len(result.Names))
 	for _, name := range result.Names {
 		if _, duplicate := seen[name.Name]; duplicate {

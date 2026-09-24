@@ -2,7 +2,9 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"math"
+	"os"
 	"strings"
 
 	"github.com/dashmage/namegen/internal/gen"
@@ -23,6 +25,7 @@ func PrintResult(result gen.Result, debug, tune bool, seed int64, userSeed bool)
 	for _, name := range result.Names {
 		PrintAcceptedName(name, verbose)
 	}
+	printShortfallWarning(os.Stderr, result)
 
 	if tune {
 		PrintTuneReport(result, seed, userSeed)
@@ -81,10 +84,20 @@ func formatSoftRules(rules []gen.Rule) string {
 	return strings.Join(parts, ",")
 }
 
+// printShortfallWarning reports when generation stops before reaching the requested count.
+func printShortfallWarning(w io.Writer, result gen.Result) {
+	if result.RequestedCount <= len(result.Names) {
+		return
+	}
+
+	fmt.Fprintf(w, "warning: generated %d of %d requested names after %d total attempts; consider increasing --attempts or adjusting generation settings\n", len(result.Names), result.RequestedCount, result.Attempts)
+}
+
 // PrintDebugSummary prints aggregate generation counts and rule hit summaries.
 func PrintDebugSummary(summary gen.Result, seed int64, userSeed bool) {
 	printHeader("\nDebug summary")
 	fmt.Printf("- attempts: %d\n", summary.Attempts)
+	fmt.Printf("- requested names: %d\n", summary.RequestedCount)
 	fmt.Printf("- accepted names: %d\n", len(summary.Names))
 	fmt.Printf("- hard rejects: %d\n", summary.HardRejects)
 	fmt.Printf("- low-score rejects: %d\n", summary.LowScoreRejects)

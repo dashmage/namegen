@@ -56,9 +56,10 @@ func RandomName(length int) string {
 // Generate creates pronounceable name candidates and populates results.
 func Generate(opt Options) Result {
 	result := Result{
-		Names:     make([]AcceptedName, 0, opt.Count),
-		Threshold: opt.Threshold,
-		RuleHits:  NewRuleHits(),
+		RequestedCount: opt.Count,
+		Names:          make([]AcceptedName, 0, opt.Count),
+		Threshold:      opt.Threshold,
+		RuleHits:       NewRuleHits(),
 	}
 	if opt.TuneEnabled {
 		result.AttemptLog = make([]Attempt, 0, opt.MaxAttempts)

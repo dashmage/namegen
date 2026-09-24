@@ -34,7 +34,7 @@ func NewConfig(attempts, count, length int, seed int64, userSeed, debug, tune bo
 }
 
 func Parse() Config {
-	attempts := flag.Int("attempts", defaults.MaxAttempts, "max attempts per requested name before failing (default: 200)")
+	attempts := flag.Int("attempts", defaults.MaxAttempts, "maximum total candidate attempts for the entire run (default: 200)")
 	count := flag.Int("count", defaults.Count, "number of names to generate (default: 10)")
 	length := flag.Int("length", defaults.Length, "length of generated name(s) (default: 5)")
 	seed := flag.Int64("seed", 0, "RNG seed for reproducible output (optional)")
