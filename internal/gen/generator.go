@@ -67,6 +67,7 @@ func Generate(opt Options) Result {
 		return result
 	}
 
+	seenNames := make(map[string]struct{})
 	for len(result.Names) < opt.Count {
 		if result.Attempts >= opt.MaxAttempts {
 			break
@@ -104,6 +105,16 @@ func Generate(opt Options) Result {
 			}
 			continue
 		}
+
+		if _, duplicate := seenNames[candidate]; duplicate {
+			result.DuplicateRejects++
+			entry.RejectReason = "duplicate"
+			if opt.TuneEnabled {
+				result.AttemptLog = append(result.AttemptLog, entry)
+			}
+			continue
+		}
+		seenNames[candidate] = struct{}{}
 
 		result.Names = append(result.Names, AcceptedName{
 			Name:            candidate,

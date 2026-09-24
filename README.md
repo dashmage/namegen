@@ -69,6 +69,8 @@ At a high level, the CLI loops until it has produced the requested number of nam
 5. Apply a score adjustment using a bigram probability model trained on existing names
 6. Accept the candidate if final score is above threshold
 
+Accepted names are unique within a run; repeated candidates are rejected and count against the attempt limit.
+
 The core flow is implemented in:
 
 - `internal/gen/generator.go`

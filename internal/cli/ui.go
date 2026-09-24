@@ -88,6 +88,7 @@ func PrintDebugSummary(summary gen.Result, seed int64, userSeed bool) {
 	fmt.Printf("- accepted names: %d\n", len(summary.Names))
 	fmt.Printf("- hard rejects: %d\n", summary.HardRejects)
 	fmt.Printf("- low-score rejects: %d\n", summary.LowScoreRejects)
+	fmt.Printf("- duplicate rejects: %d\n", summary.DuplicateRejects)
 	fmt.Printf("- threshold: %d\n", summary.Threshold)
 	if userSeed {
 		fmt.Printf("- seed: %d (provided)\n", seed)

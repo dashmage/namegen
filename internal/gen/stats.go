@@ -9,13 +9,14 @@ type AcceptedName struct {
 
 // Result contains accepted names, aggregate counters, and optional candidate details.
 type Result struct {
-	Names           []AcceptedName
-	AttemptLog      []Attempt
-	Attempts        int
-	HardRejects     int
-	LowScoreRejects int
-	Threshold       int
-	RuleHits        RuleHits
+	Names            []AcceptedName
+	AttemptLog       []Attempt
+	Attempts         int
+	HardRejects      int
+	LowScoreRejects  int
+	DuplicateRejects int
+	Threshold        int
+	RuleHits         RuleHits
 }
 
 // Attempt records scoring and rejection context for one candidate.
