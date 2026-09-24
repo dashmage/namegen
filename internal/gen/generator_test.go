@@ -1,6 +1,30 @@
 package gen
 
-import "testing"
+import (
+	"sync"
+	"testing"
+)
+
+func TestRandomNameAndSetSeedAreSafeConcurrently(t *testing.T) {
+	var wait sync.WaitGroup
+	for worker := range 8 {
+		wait.Add(1)
+		go func(worker int) {
+			defer wait.Done()
+			for iteration := range 100 {
+				if worker%2 == 0 {
+					SetSeed(int64(worker*100 + iteration))
+					continue
+				}
+				if got := RandomName(5); len(got) != 5 {
+					t.Errorf("RandomName(5) length = %d, want 5", len(got))
+					return
+				}
+			}
+		}(worker)
+	}
+	wait.Wait()
+}
 
 func TestGenerateBoundsInitialResultCapacity(t *testing.T) {
 	result := Generate(Options{

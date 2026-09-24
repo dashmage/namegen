@@ -3,6 +3,7 @@ package gen
 import (
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dashmage/namegen/internal/defaults"
@@ -26,20 +27,29 @@ var rhythmTemplates = []struct {
 	{Pattern: "VC", Weight: 1},
 }
 
-var rng = rand.New(rand.NewSource(time.Now().UnixNano()))
+var (
+	rngMu sync.Mutex
+	rng   = rand.New(rand.NewSource(time.Now().UnixNano()))
+)
 
 const initialNameCapacity = 64
 
-// SetSeed sets the generator RNG to a deterministic seed.
+// SetSeed sets the package-wide generator RNG to a deterministic seed. Concurrent
+// calls are safe, though concurrent generation order is scheduling-dependent.
 func SetSeed(seed int64) {
+	rngMu.Lock()
+	defer rngMu.Unlock()
 	rng.Seed(seed)
 }
 
-// RandomName generates a random name of provided length.
+// RandomName generates a random name of provided length. It is safe for concurrent use.
 func RandomName(length int) string {
 	if length <= 0 {
 		return ""
 	}
+
+	rngMu.Lock()
+	defer rngMu.Unlock()
 
 	pattern := buildRhythmPattern(length)
 	for i := range pattern {
