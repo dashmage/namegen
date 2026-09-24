@@ -6,6 +6,37 @@ import (
 	"github.com/dashmage/namegen/internal/defaults"
 )
 
+func TestUncommonSequencesAreReachableSoftRules(t *testing.T) {
+	for _, sequence := range UncommonSequences {
+		word := "a" + sequence + "a"
+		t.Run(sequence, func(t *testing.T) {
+			for _, rule := range HardRules {
+				if rule.Check(word) {
+					t.Fatalf("sequence %q is unreachable because hard rule %q rejects %q", sequence, rule.Name, word)
+				}
+			}
+			if !UncommonSequence(word) {
+				t.Fatalf("UncommonSequence(%q) = false, want true", word)
+			}
+		})
+	}
+}
+
+func TestUncommonSequenceDoesNotDuplicateDedicatedSoftRules(t *testing.T) {
+	for _, word := range []string{"aiia", "auua", "aiqa", "auqa"} {
+		if UncommonSequence(word) {
+			t.Errorf("UncommonSequence(%q) = true, want false", word)
+		}
+	}
+
+	if !RepeatedSameVowelPair("aiia") || !RepeatedSameVowelPair("auua") {
+		t.Fatal("expected dedicated repeated-vowel rule to catch ii and uu")
+	}
+	if !QWithoutU("aiqa") || !QWithoutU("auqa") {
+		t.Fatal("expected dedicated q rule to catch iq and uq")
+	}
+}
+
 func TestEvaluateHardRuleShortCircuitsScoring(t *testing.T) {
 	hits := NewRuleHits()
 
@@ -69,20 +100,17 @@ func TestEvaluateCapturesSoftPenaltiesAndDetails(t *testing.T) {
 	if evaluation.HardReject {
 		t.Fatalf("expected soft-rule evaluation, got hard reject %q", evaluation.HardRule)
 	}
-	if len(evaluation.SoftRules) != 3 {
-		t.Fatalf("SoftRules length = %d, want 3", len(evaluation.SoftRules))
+	if len(evaluation.SoftRules) != 2 {
+		t.Fatalf("SoftRules length = %d, want 2", len(evaluation.SoftRules))
 	}
-	if evaluation.SoftRules[0].Name != "uncommon_sequence" {
-		t.Fatalf("first soft rule = %q, want %q", evaluation.SoftRules[0].Name, "uncommon_sequence")
+	if evaluation.SoftRules[0].Name != "rare_letter_density" {
+		t.Fatalf("first soft rule = %q, want %q", evaluation.SoftRules[0].Name, "rare_letter_density")
 	}
-	if evaluation.SoftRules[1].Name != "rare_letter_density" {
-		t.Fatalf("second soft rule = %q, want %q", evaluation.SoftRules[1].Name, "rare_letter_density")
+	if evaluation.SoftRules[1].Name != "repeated_same_vowel_pair" {
+		t.Fatalf("second soft rule = %q, want %q", evaluation.SoftRules[1].Name, "repeated_same_vowel_pair")
 	}
-	if evaluation.SoftRules[2].Name != "repeated_same_vowel_pair" {
-		t.Fatalf("third soft rule = %q, want %q", evaluation.SoftRules[2].Name, "repeated_same_vowel_pair")
-	}
-	if hits.Soft["uncommon_sequence"] != 1 {
-		t.Fatalf("uncommon_sequence hits = %d, want 1", hits.Soft["uncommon_sequence"])
+	if hits.Soft["uncommon_sequence"] != 0 {
+		t.Fatalf("uncommon_sequence hits = %d, want 0", hits.Soft["uncommon_sequence"])
 	}
 	if hits.Soft["rare_letter_density"] != 1 {
 		t.Fatalf("rare_letter_density hits = %d, want 1", hits.Soft["rare_letter_density"])

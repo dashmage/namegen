@@ -119,7 +119,7 @@ Hard rules
 
 Soft rules
 
-- uncommon or awkward sequences (`qx`, `jq`, `qj`, etc.)
+- uncommon or awkward letter sequences
 - `q` not followed by `u`
 - too many rare letters (`j`, `q`, `x`, `z`)
 - repeated identical vowel pairs

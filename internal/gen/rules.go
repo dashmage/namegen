@@ -59,7 +59,7 @@ var SoftRules = []Rule{
 	{
 		Type:        SoftRule,
 		Name:        "uncommon_sequence",
-		Description: "Penalizes impossible or very awkward letter pairs.",
+		Description: "Penalizes uncommon or awkward letter sequences.",
 		Penalty:     25,
 		Check:       UncommonSequence,
 	},
@@ -94,9 +94,9 @@ var SoftRules = []Rule{
 }
 
 var (
-	// Keep only non-consonant-adjacency pairs here.
-	// Consonant-consonant restrictions are handled by IllegalConsonantAdjacency.
-	UncommonSequences = []string{"yb", "yj", "yf", "jj", "vv", "qq", "xx", "zz", "iq", "iy", "uq", "vf", "wh", "yh", "jh", "qh", "ii", "uu", "hwl", "dzd", "gfm", "ynk", "fdd", "zdd", "ddl", "lzd", "vdd", "wlk"}
+	// Keep only sequences that are not already rejected by a hard rule or
+	// covered by a dedicated soft rule.
+	UncommonSequences = []string{"yb", "yj", "yf", "vv", "iy", "yh", "ynk"}
 
 	// Entries restrict which consonants may follow that consonant. Missing keys
 	// mean there is no explicit restriction; an empty value disallows all
