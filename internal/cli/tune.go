@@ -3,6 +3,7 @@ package cli
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -24,18 +25,21 @@ type tuneRecommendation struct {
 }
 
 type softRuleSignal struct {
-	Rule  gen.Rule
-	Score int
-	Count int
+	Rule        gen.Rule
+	Score       int
+	Count       int
+	RatingTotal int
 }
 
 type bandSignal struct {
-	BandName string
-	Score    int
-	Count    int
+	BandName    string
+	Score       int
+	Count       int
+	RatingTotal int
 }
 
 const (
+	tuneMinimumGroupSamples   = 5
 	tuneSignalsFormat         = "Signals: hard_rule=%s soft_rules=%s probability_band=%s\n"
 	tuneSuggestionsHeader     = "Manual tuning suggestions after %d rating(s)\n"
 	tuneNoStrongSignalMessage = "- No strong signal yet. Keep rating more names."
@@ -191,21 +195,26 @@ func summarizeSoftRuleSignals(observations []tuneObservation) []softRuleSignal {
 		signals[rule.Name] = &softRuleSignal{Rule: rule}
 	}
 
+	totalRating := 0
 	for _, observation := range observations {
-		signal := ratingSignal(observation.Rating)
+		totalRating += observation.Rating
 		for _, rule := range observation.Evaluation.SoftRules {
 			entry, ok := signals[rule.Name]
 			if !ok {
 				continue
 			}
-			entry.Score += signal
+			entry.RatingTotal += observation.Rating
 			entry.Count++
 		}
 	}
 
 	out := make([]softRuleSignal, 0, len(signals))
 	for _, signal := range signals {
-		if signal.Count == 0 {
+		if !hasEnoughComparisonSamples(signal.Count, len(observations)) {
+			continue
+		}
+		signal.Score = comparativeRatingSignal(signal.RatingTotal, signal.Count, totalRating, len(observations))
+		if signal.Score == 0 {
 			continue
 		}
 		out = append(out, *signal)
@@ -229,18 +238,26 @@ func summarizeBandSignals(observations []tuneObservation) []bandSignal {
 		"good": {BandName: "good"},
 	}
 
+	totalCount := 0
+	totalRating := 0
 	for _, observation := range observations {
 		entry, ok := signals[observation.Evaluation.ProbabilityBand.Name]
 		if !ok {
 			continue
 		}
-		entry.Score += ratingSignal(observation.Rating)
+		totalCount++
+		totalRating += observation.Rating
+		entry.RatingTotal += observation.Rating
 		entry.Count++
 	}
 
 	out := make([]bandSignal, 0, len(signals))
 	for _, signal := range signals {
-		if signal.Count == 0 {
+		if !hasEnoughComparisonSamples(signal.Count, totalCount) {
+			continue
+		}
+		signal.Score = comparativeRatingSignal(signal.RatingTotal, signal.Count, totalRating, totalCount)
+		if signal.Score == 0 {
 			continue
 		}
 		out = append(out, *signal)
@@ -254,6 +271,24 @@ func summarizeBandSignals(observations []tuneObservation) []bandSignal {
 	})
 
 	return out
+}
+
+func hasEnoughComparisonSamples(groupCount, totalCount int) bool {
+	controlCount := totalCount - groupCount
+	return groupCount >= tuneMinimumGroupSamples && controlCount >= tuneMinimumGroupSamples
+}
+
+// comparativeRatingSignal is the group's mean-rating difference from its control
+// group, scaled by group size so better-supported signals rank more strongly.
+func comparativeRatingSignal(groupRatingTotal, groupCount, totalRating, totalCount int) int {
+	controlCount := totalCount - groupCount
+	if groupCount == 0 || controlCount == 0 {
+		return 0
+	}
+
+	groupMean := float64(groupRatingTotal) / float64(groupCount)
+	controlMean := float64(totalRating-groupRatingTotal) / float64(controlCount)
+	return int(math.Round((groupMean - controlMean) * float64(groupCount)))
 }
 
 func recommendationForBand(signal bandSignal) tuneRecommendation {
@@ -306,10 +341,6 @@ func recommendationForBand(signal bandSignal) tuneRecommendation {
 			Message: fmt.Sprintf(tuneGoodWeakFormat, defaults.GoodProbBonus, max(0, defaults.GoodProbBonus-5), defaults.MidProbCutoff, defaults.MidProbCutoff+step),
 		}
 	}
-}
-
-func ratingSignal(rating int) int {
-	return rating - 3
 }
 
 func penaltyStep(score int) int {
