@@ -6,17 +6,19 @@ import (
 	"github.com/dashmage/namegen/internal/defaults"
 )
 
+// ProbabilityBand labels an average bigram log-probability range. Value is the
+// rounded score adjustment computed from the continuous probability score.
 type ProbabilityBand struct {
 	Name  string
 	Value int
 }
 
 var (
-	probBandUnknown = ProbabilityBand{Name: "unknown", Value: 0}
-	probBandVeryLow = ProbabilityBand{Name: "vlow", Value: -defaults.VeryLowProbPenalty}
-	probBandLow     = ProbabilityBand{Name: "low", Value: -defaults.LowProbPenalty}
-	probBandMid     = ProbabilityBand{Name: "mid", Value: -defaults.MidProbPenalty}
-	probBandGood    = ProbabilityBand{Name: "good", Value: defaults.GoodProbBonus}
+	probBandUnknown = ProbabilityBand{Name: "unknown"}
+	probBandVeryLow = ProbabilityBand{Name: "vlow"}
+	probBandLow     = ProbabilityBand{Name: "low"}
+	probBandMid     = ProbabilityBand{Name: "mid"}
+	probBandGood    = ProbabilityBand{Name: "good"}
 )
 
 // BigramModel stores transition counts and smoothing configuration.
@@ -98,7 +100,7 @@ func (m *BigramModel) AvgLogProb(word string) float64 {
 	return sum / float64(steps)
 }
 
-// probabilityBandFor returns the probability band name for a particular cutoff value
+// probabilityBandFor returns the descriptive probability band for an average log-probability.
 func probabilityBandFor(avgLogProb float64) ProbabilityBand {
 	switch {
 	case avgLogProb < defaults.VeryLowProbCutoff:
@@ -112,11 +114,37 @@ func probabilityBandFor(avgLogProb float64) ProbabilityBand {
 	}
 }
 
-// ScoreAdjustment maps average bigram log-probability into a score adjustment.
-// Low-probability transitions apply penalties; strong transitions can add a small bonus.
+// scoreAdjustmentFor continuously maps average log-probability to the configured
+// penalty/bonus range, interpolating between the cutoff anchors.
+func scoreAdjustmentFor(avgLogProb float64) int {
+	switch {
+	case math.IsNaN(avgLogProb):
+		return 0
+	case avgLogProb <= defaults.VeryLowProbCutoff:
+		return -defaults.VeryLowProbPenalty
+	case avgLogProb <= defaults.LowProbCutoff:
+		return interpolateScore(avgLogProb, defaults.VeryLowProbCutoff, -defaults.VeryLowProbPenalty, defaults.LowProbCutoff, -defaults.LowProbPenalty)
+	case avgLogProb <= defaults.MidProbCutoff:
+		return interpolateScore(avgLogProb, defaults.LowProbCutoff, -defaults.LowProbPenalty, defaults.MidProbCutoff, -defaults.MidProbPenalty)
+	case avgLogProb <= defaults.GoodProbBonusCutoff:
+		return interpolateScore(avgLogProb, defaults.MidProbCutoff, -defaults.MidProbPenalty, defaults.GoodProbBonusCutoff, defaults.GoodProbBonus)
+	default:
+		return defaults.GoodProbBonus
+	}
+}
+
+func interpolateScore(x, x1 float64, y1 int, x2 float64, y2 int) int {
+	fraction := (x - x1) / (x2 - x1)
+	return int(math.Round(float64(y1) + fraction*float64(y2-y1)))
+}
+
+// ScoreAdjustment maps average bigram log-probability into a continuous score
+// adjustment. ProbabilityBand.Name remains a coarse diagnostic label, while
+// ProbabilityBand.Value contains the rounded adjustment used for scoring.
 func (m *BigramModel) ScoreAdjustment(word string) (band ProbabilityBand, avgLogProb float64) {
 	avgLogProb = m.AvgLogProb(word)
 	band = probabilityBandFor(avgLogProb)
+	band.Value = scoreAdjustmentFor(avgLogProb)
 	return band, avgLogProb
 }
 

@@ -180,6 +180,15 @@ Using logs converts products into sums:
 
 The model uses **average** log probability so scores are comparable across lengths.
 
+The score adjustment is a bounded, piecewise-linear mapping of that average, rather than one fixed adjustment per band. It interpolates between these anchors:
+
+- `VeryLowProbCutoff` -> `-VeryLowProbPenalty`
+- `LowProbCutoff` -> `-LowProbPenalty`
+- `MidProbCutoff` -> `-MidProbPenalty`
+- `GoodProbBonusCutoff` -> `+GoodProbBonus`
+
+Values beyond the anchors are clamped. Probability bands remain as coarse diagnostic labels; the actual adjustment is stored with the band and uses the continuous score.
+
 ### End-to-end example
 
 Corpus words:

@@ -24,6 +24,8 @@ const (
 	VeryLowProbCutoff = -4.2
 	LowProbCutoff     = -3.6
 	MidProbCutoff     = -3.1
+	// Average log-probability where the full good-probability bonus is reached.
+	GoodProbBonusCutoff = -2.6
 
 	VeryLowProbPenalty = 30
 	LowProbPenalty     = 20
