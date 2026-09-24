@@ -26,6 +26,27 @@ func TestEvaluateHardRuleShortCircuitsScoring(t *testing.T) {
 	}
 }
 
+func TestIllegalConsonantAdjacencyUsesExplicitNextAllowLists(t *testing.T) {
+	tests := []struct {
+		name string
+		word string
+		want bool
+	}{
+		{name: "common st cluster is not restricted by missing s entry", word: "sta", want: false},
+		{name: "unlisted m has no explicit restriction", word: "mta", want: false},
+		{name: "listed b rejects disallowed m", word: "bma", want: true},
+		{name: "listed b permits l", word: "bla", want: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := IllegalConsonantAdjacency(test.word); got != test.want {
+				t.Fatalf("IllegalConsonantAdjacency(%q) = %t, want %t", test.word, got, test.want)
+			}
+		})
+	}
+}
+
 func TestEvaluateCapturesSoftPenaltiesAndDetails(t *testing.T) {
 	hits := NewRuleHits()
 

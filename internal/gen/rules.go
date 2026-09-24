@@ -98,7 +98,9 @@ var (
 	// Consonant-consonant restrictions are handled by IllegalConsonantAdjacency.
 	UncommonSequences = []string{"yb", "yj", "yf", "jj", "vv", "qq", "xx", "zz", "iq", "iy", "uq", "vf", "wh", "yh", "jh", "qh", "ii", "uu", "hwl", "dzd", "gfm", "ynk", "fdd", "zdd", "ddl", "lzd", "vdd", "wlk"}
 
-	// Missing keys mean no explicit adjacency restriction for that consonant.
+	// Entries restrict which consonants may follow that consonant. Missing keys
+	// mean there is no explicit restriction; an empty value disallows all
+	// consonant-to-consonant transitions from that consonant.
 	AllowedNextConsonants = map[byte]string{
 		'b': "lr",
 		'c': "hlrstw",
@@ -116,52 +118,7 @@ var (
 		'x': "pst",
 		'z': "jklr",
 	}
-	AllowedPrevConsonants = buildAllowedPrevConsonants(AllowedNextConsonants)
 )
-
-// buildAllowedPrevConsonants inverts a next-consonant allow-list map.
-//
-// Input map format: left -> allowed right consonants.
-// Output map format: right -> allowed left consonants.
-//
-// For example, if
-//
-//	AllowedNextConsonants['k'] = "hsr"
-//
-// Then, the inverted result includes:
-//
-//	AllowedPrevConsonants['h'] contains 'k'
-//	AllowedPrevConsonants['s'] contains 'k'
-//	AllowedPrevConsonants['r'] contains 'k'
-//
-// The returned strings are ordered by defaults.Consonants for deterministic
-// behavior and stable debugging output.
-func buildAllowedPrevConsonants(next map[byte]string) map[byte]string {
-	allowed := make(map[byte]map[byte]bool)
-	for left, rights := range next {
-		for i := 0; i < len(rights); i++ {
-			right := rights[i]
-			if allowed[right] == nil {
-				allowed[right] = make(map[byte]bool)
-			}
-			allowed[right][left] = true
-		}
-	}
-
-	prev := make(map[byte]string, len(allowed))
-	for right, leftSet := range allowed {
-		var list strings.Builder
-		for i := range len(defaults.Consonants) {
-			left := defaults.Consonants[i]
-			if leftSet[left] {
-				list.WriteByte(left)
-			}
-		}
-		prev[right] = list.String()
-	}
-
-	return prev
-}
 
 // ThreeConsecutiveConsonants returns true if 3 or more consecutive consonants are present.
 func ThreeConsecutiveConsonants(word string) bool {
@@ -274,10 +231,6 @@ func IllegalConsonantAdjacency(word string) bool {
 		}
 
 		if allowed, ok := AllowedNextConsonants[left]; ok && !strings.ContainsRune(allowed, rune(right)) {
-			return true
-		}
-
-		if allowed, ok := AllowedPrevConsonants[right]; ok && !strings.ContainsRune(allowed, rune(left)) {
 			return true
 		}
 	}
